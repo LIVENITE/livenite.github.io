@@ -6,34 +6,112 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Testing only: keeps search engines from listing the site. Remove at launch if you want it findable. -->
 <meta name="robots" content="noindex">
-<title>Live Prize</title>
+<title>LIVENITE Tonight</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="assets/shared.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="assets/theme.css">
 </head>
 <body>
-<div class="page">
-  <header>
-    <div class="brand" id="brand"></div>
-    <div class="sub" id="sub"></div>
-  </header>
+<div class="lights" aria-hidden="true"></div>
 
-  <main aria-live="polite">
-    <div class="label">CURRENT PRIZE</div>
-    <div class="amount empty" id="amount">&mdash;</div>
-    <div class="updated" id="updated">Waiting for the first update</div>
-    <div class="warn" id="stale" hidden>Prize may be out of date</div>
-  </main>
+<header class="topbar">
+  <div class="wrap">
+    <a class="mark" href="#">LIVENITE</a>
+    <nav class="nav" aria-label="Main">
+      <a href="#" data-nav="home">Tonight</a>
+      <a href="#programme" data-nav="programme">Programme</a>
+      <a href="#venues" data-nav="venues">Venues</a>
+      <a href="5050/" data-nav="draw">50/50</a>
+    </nav>
+    <span class="clock" id="clock" aria-label="Current time"></span>
+    <a href="manage/" class="mgr-link" data-nav="manage">Manager login</a>
+  </div>
+</header>
 
-  <footer>
-    <div class="facts">
-      <div class="fact"><div class="k">TICKET PRICE</div><div class="v" id="price">&mdash;</div></div>
-      <div class="fact"><div class="k">DRAW TIME</div><div class="v" id="time">&mdash;</div></div>
+<!-- Home: tonight's itinerary -->
+<main class="wrap home" id="view-home">
+  <p class="note" id="live-note" hidden></p>
+  <section aria-labelledby="brand">
+    <div class="marquee">
+      <div class="bulbs top" aria-hidden="true"></div>
+      <p class="eyebrow">Tonight's programme</p>
+      <h1 class="brand" id="brand">LIVENITE</h1>
+      <p class="tagline" id="tagline"></p>
+      <div class="bulbs bottom" aria-hidden="true"></div>
     </div>
-    <div class="note" id="live-note" hidden></div>
-  </footer>
+    <div class="nownext">
+      <article class="panel" id="now-panel" aria-live="polite"></article>
+      <article class="panel" id="next-panel"></article>
+    </div>
+  </section>
+
+  <section class="pot" aria-labelledby="pot-label">
+    <div>
+      <p class="eyebrow" id="pot-label">50/50 pot right now</p>
+      <p class="pot-amt"><span id="pot">—</span><span class="pot-jump" id="pot-jump" hidden></span></p>
+      <p class="pot-sub" id="pot-sub"></p>
+    </div>
+    <a class="btn" href="5050/">Watch the pot</a>
+  </section>
+
+  <section id="programme" aria-labelledby="prog-title">
+    <div class="section-head">
+      <h2 id="prog-title">The night's programme</h2>
+      <div class="chips" id="chips" role="group" aria-label="Filter by venue"></div>
+    </div>
+    <ol class="timeline" id="timeline"></ol>
+  </section>
+
+  <section id="venues" aria-labelledby="venues-title">
+    <h2 id="venues-title">Around the venue</h2>
+    <div class="venues" id="venues"></div>
+  </section>
+</main>
+
+<!-- One activity -->
+<main class="wrap detail" id="view-detail" hidden>
+  <a class="back" href="#">&larr; Back to tonight</a>
+  <section class="detail-hero">
+    <div class="act-top" id="d-top"></div>
+    <h1 id="d-title"></h1>
+    <div class="facts">
+      <div class="fact"><div class="k">Where</div><div class="v" id="d-where"></div></div>
+      <div class="fact"><div class="k">When</div><div class="v" id="d-when"></div></div>
+      <div class="fact"><div class="k" id="d-count-k">Starts in</div><div class="v" id="d-count"></div></div>
+    </div>
+    <div id="d-5050" hidden><a class="btn" href="5050/">Watch the 50/50 pot</a></div>
+  </section>
+  <div class="detail-body">
+    <div>
+      <p class="eyebrow">What happens</p>
+      <p id="d-blurb"></p>
+    </div>
+    <div>
+      <p class="eyebrow">Hosted by</p>
+      <p id="d-host"></p>
+      <p class="eyebrow" style="margin-top:18px">Also in this venue</p>
+      <ul id="d-more"></ul>
+    </div>
+  </div>
+</main>
+
+<div class="float-pot" id="float-pot" hidden>
+  <a class="fp-link" href="5050/" id="fp-link">
+    <span class="fp-label">50/50</span>
+    <span class="fp-amt" id="fp-amt"></span>
+    <span class="fp-when" id="fp-when"></span>
+  </a>
+  <button type="button" class="fp-close" id="fp-close" aria-label="Hide the 50/50 countdown">&times;</button>
 </div>
-<script type="module" src="assets/board.js"></script>
+
+<footer class="site-footer">
+  <div class="wrap">
+    <span>LIVENITE · times update live from the hosts</span>
+    <a href="tv/">TV screen</a>
+  </div>
+</footer>
+
+<script type="module" src="assets/home.js"></script>
 </body>
 </html>

@@ -1,8 +1,8 @@
 rules_version = '2';
 
 // Paste this whole file into Firebase: Firestore Database > Rules > Publish.
-// Anyone can read the prize. Only managers can change it, and the history
-// can be added to but never edited or deleted.
+// Anyone can read the prize and tonight's activities. Only managers can change
+// them, and the prize history can be added to but never edited or deleted.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -45,6 +45,27 @@ service cloud.firestore {
         allow create: if isManager() && validHistory();
         allow update, delete: if false;
       }
+    }
+
+    // Tonight's activities: anyone can read them, managers add, change and remove them.
+    function validActivity() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['title', 'type', 'venue', 'start', 'length', 'blurb', 'host', 'updatedAt'])
+        && d.keys().hasAll(['title', 'type', 'venue', 'start', 'length', 'blurb', 'host', 'updatedAt'])
+        && d.title is string && d.title.size() > 0 && d.title.size() <= 60
+        && d.type in ['game', 'music', 'social', 'challenge', 'draw']
+        && d.venue is string && d.venue.size() > 0 && d.venue.size() <= 30
+        && d.start is timestamp
+        && d.length is int && d.length >= 5 && d.length <= 360
+        && d.blurb is string && d.blurb.size() <= 200
+        && d.host is string && d.host.size() <= 60
+        && d.updatedAt == request.time;
+    }
+
+    match /activities/{activityId} {
+      allow read: if true;
+      allow create, update: if isManager() && validActivity();
+      allow delete: if isManager();
     }
 
     // Each user may check whether they are on the list; nobody can change it from a page.

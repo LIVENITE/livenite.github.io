@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en" class="board-page">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>LIVENITE 50/50 TV</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="../../assets/theme.css">
+</head>
+<body class="tv">
+<div class="lights" aria-hidden="true"></div>
+<div class="wrap board">
+  <div class="marquee-strip" aria-hidden="true"><div class="bulbs"></div></div>
+  <header>
+    <div class="b-brand" id="brand"></div>
+    <div class="b-sub" id="sub"></div>
+  </header>
+
+  <main aria-live="polite">
+    <div class="label">CURRENT PRIZE</div>
+    <div class="amount empty" id="amount">&mdash;</div>
+    <div class="updated" id="updated">Waiting for the first update</div>
+    <div class="warn" id="stale" hidden>Prize may be out of date</div>
+  </main>
+
+  <footer>
+    <div class="facts-row">
+      <div class="fact"><div class="k">TICKET PRICE</div><div class="v" id="price">&mdash;</div></div>
+      <div class="fact"><div class="k">DRAW TIME</div><div class="v" id="time">&mdash;</div></div>
+      <div class="fact" id="count-fact" hidden><div class="k" id="count-k">DRAW IN</div><div class="v count" id="count"></div></div>
+    </div>
+    <div class="note" id="live-note" hidden></div>
+  </footer>
+  <div class="marquee-strip" aria-hidden="true"><div class="bulbs"></div></div>
+</div>
+<script type="module" src="../../assets/board.js"></script>
+</body>
+</html>

@@ -1,17 +1,116 @@
-// Manager page: log in, then update the prize. Only people listed in the
-// database's "managers" collection can save (enforced by firestore.rules).
+// Manager page: log in, then update the 50/50 prize or tonight's activities.
+// Only people listed in the database's "managers" collection can save (enforced by firestore.rules).
 import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-import { doc, getDoc, onSnapshot, writeBatch, collection, serverTimestamp, query, orderBy, limit, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, writeBatch, collection, serverTimestamp, query, orderBy, limit, getDocs, addDoc, setDoc, deleteDoc, Timestamp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { app, db, configured } from "./firebase-init.js";
-import { GAME_ID } from "./config.js";
-import { money, clock, parseAmount, toMillis } from "./format.js";
+import { GAME_ID, VENUES, TYPES } from "./config.js";
+import { MIN, pad, money, clock, clockParts, parseAmount, toMillis } from "./format.js";
+import { watchActivities, venueOf, sampleNight } from "./activities.js";
+import { startBulbs, startClock } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 let unsub = null;
+let unsubActs = null;
 let filled = false;
+let acts = [];
 
 function show(view) {
-  for (const id of ["view-setup", "view-login", "view-denied", "view-form"]) $(id).hidden = id !== view;
+  for (const id of ["view-setup", "view-login", "view-denied", "view-app"]) $(id).hidden = id !== view;
+}
+
+function el(tag, cls, text) {
+  const n = document.createElement(tag);
+  if (cls) n.className = cls;
+  if (text != null) n.textContent = text;
+  return n;
+}
+
+// ---------- Tabs ----------
+function selectTab(name) {
+  for (const t of ["prize", "acts"]) {
+    $("tab-" + t).setAttribute("aria-selected", String(t === name));
+    $("panel-" + t).hidden = t !== name;
+  }
+}
+$("tab-prize").addEventListener("click", () => selectTab("prize"));
+$("tab-acts").addEventListener("click", () => selectTab("acts"));
+
+// ---------- Activities ----------
+let editing = null;
+const armed = {};
+// Two-tap confirm for destructive buttons: the first tap arms it, the second does it.
+function confirmTap(id, label, armedLabel) {
+  if (!armed[id]) {
+    armed[id] = true;
+    $(id).textContent = armedLabel;
+    setTimeout(() => { armed[id] = false; $(id).textContent = label; }, 5000);
+    return false;
+  }
+  armed[id] = false;
+  $(id).textContent = label;
+  return true;
+}
+
+function fillSelect(sel, items) {
+  sel.replaceChildren();
+  items.forEach(([value, label]) => { const o = el("option", null, label); o.value = value; sel.append(o); });
+}
+fillSelect($("m-type"), Object.entries(TYPES));
+fillSelect($("m-venue"), VENUES.map((v) => [v.id, v.name]));
+
+// datetime-local wants local "YYYY-MM-DDTHH:MM".
+function toLocalInput(ms) {
+  const d = new Date(ms);
+  return d.getFullYear() + "-" + pad(d.getMonth() + 1) + "-" + pad(d.getDate()) + "T" + pad(d.getHours()) + ":" + pad(d.getMinutes());
+}
+
+function renderActs() {
+  const list = $("m-list");
+  list.replaceChildren();
+  acts.forEach((a) => {
+    const li = el("li", "mgr-row");
+    const n = el("div", "n");
+    n.append(el("b", null, a.title), el("span", null, (TYPES[a.type] || a.type) + " · " + venueOf(a).name + " · " + a.length + " min"));
+    const b = el("button", "btn ghost", "Edit");
+    b.type = "button";
+    b.addEventListener("click", () => openForm(a));
+    const t = clockParts(a.start);
+    li.append(el("span", "t", t[0] + " " + t[1]), n, b);
+    list.append(li);
+  });
+  if (!acts.length) list.append(el("li", "empty", "No activities yet. Add one, or load the sample night to try things out."));
+  $("m-clear").hidden = !acts.length;
+}
+
+function openForm(a) {
+  editing = a;
+  armed["m-delete"] = false;
+  $("m-delete").textContent = "Delete";
+  $("m-delete").hidden = !a;
+  $("m-form-title").textContent = a ? "Edit activity" : "New activity";
+  $("m-title").value = a ? a.title : "";
+  $("m-type").value = a ? a.type : "game";
+  $("m-venue").value = a ? a.venue : VENUES[0].id;
+  $("m-start").value = toLocalInput(a ? a.start : Math.ceil(Date.now() / (15 * MIN)) * 15 * MIN);
+  $("m-len").value = a ? a.length : 30;
+  $("m-host").value = a ? a.host : "";
+  $("m-blurb").value = a ? a.blurb : "";
+  status("m-status", "");
+  $("m-form").hidden = false;
+  $("m-title").focus();
+}
+function closeForm() {
+  $("m-form").hidden = true;
+  editing = null;
+}
+
+function watchActs() {
+  if (unsubActs) return;
+  unsubActs = watchActivities((list) => {
+    acts = list;
+    renderActs();
+    if (editing && !acts.some((a) => a.id === editing.id)) closeForm();
+  }, () => status("acts-status", "Lost connection. Reload the page.", true));
 }
 
 function status(id, text, bad) {
@@ -78,7 +177,9 @@ if (!configured) {
 
   onAuthStateChanged(auth, async (user) => {
     if (unsub) { unsub(); unsub = null; }
+    if (unsubActs) { unsubActs(); unsubActs = null; }
     filled = false;
+    closeForm();
     if (!user) { show("view-login"); return; }
     $("who").textContent = user.email || "";
     try {
@@ -89,9 +190,10 @@ if (!configured) {
       show("view-login");
       return;
     }
-    show("view-form");
+    show("view-app");
     status("save-status", "");
     watchCurrent();
+    watchActs();
     loadHistory();
   });
 
@@ -139,4 +241,84 @@ if (!configured) {
     }
     $("save").disabled = false;
   });
+
+  $("m-add").addEventListener("click", () => openForm(null));
+  $("m-cancel").addEventListener("click", closeForm);
+
+  $("m-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const title = $("m-title").value.trim().slice(0, 60);
+    const length = parseInt($("m-len").value, 10);
+    const start = new Date($("m-start").value).getTime();
+    if (!title) { status("m-status", "Give the activity a name.", true); return; }
+    if (!isFinite(start)) { status("m-status", "Pick a start date and time.", true); return; }
+    if (!(length >= 5 && length <= 360)) { status("m-status", "Length must be between 5 and 360 minutes.", true); return; }
+    const data = {
+      title,
+      type: $("m-type").value,
+      venue: $("m-venue").value,
+      start: Timestamp.fromMillis(start),
+      length,
+      host: $("m-host").value.trim().slice(0, 60),
+      blurb: $("m-blurb").value.trim().slice(0, 200),
+      updatedAt: serverTimestamp()
+    };
+    $("m-save").disabled = true;
+    status("m-status", "Saving…");
+    try {
+      if (editing) await setDoc(doc(db, "activities", editing.id), data);
+      else await addDoc(collection(db, "activities"), data);
+      closeForm();
+      status("acts-status", "Saved. Every screen shows the change within a few seconds.");
+    } catch (err) {
+      status("m-status", "Could not save (" + ((err && err.code) || "error") + "). Try again.", true);
+    }
+    $("m-save").disabled = false;
+  });
+
+  $("m-delete").addEventListener("click", async () => {
+    if (!editing || !confirmTap("m-delete", "Delete", "Tap again to delete")) return;
+    try {
+      await deleteDoc(doc(db, "activities", editing.id));
+      closeForm();
+      status("acts-status", "Deleted.");
+    } catch (err) {
+      status("m-status", "Could not delete (" + ((err && err.code) || "error") + ").", true);
+    }
+  });
+
+  $("m-sample").addEventListener("click", async () => {
+    if (acts.length && !confirmTap("m-sample", "Load sample night", "Adds 10 more. Tap again")) return;
+    const batch = writeBatch(db);
+    sampleNight(Date.now()).forEach((a) => {
+      batch.set(doc(collection(db, "activities")), {
+        title: a.title, type: a.type, venue: a.venue, start: Timestamp.fromMillis(a.start),
+        length: a.length, host: a.host, blurb: a.blurb, updatedAt: serverTimestamp()
+      });
+    });
+    status("acts-status", "Loading the sample night…");
+    try {
+      await batch.commit();
+      status("acts-status", "Sample night loaded. It's timed around now so something is live.");
+    } catch (err) {
+      status("acts-status", "Could not load the sample (" + ((err && err.code) || "error") + ").", true);
+    }
+  });
+
+  $("m-clear").addEventListener("click", async () => {
+    if (!confirmTap("m-clear", "Clear all", "Deletes all " + acts.length + ". Tap again")) return;
+    const batch = writeBatch(db);
+    acts.forEach((a) => batch.delete(doc(db, "activities", a.id)));
+    try {
+      await batch.commit();
+      closeForm();
+      status("acts-status", "All activities cleared.");
+    } catch (err) {
+      status("acts-status", "Could not clear (" + ((err && err.code) || "error") + ").", true);
+    }
+  });
 }
+
+startBulbs();
+startClock();
+selectTab("prize");

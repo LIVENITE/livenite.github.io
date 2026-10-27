@@ -1,13 +1,17 @@
-// Public page and TV: show the live prize. One live connection per screen,
-// paused while the tab is hidden or the phone is locked, to keep database reads low.
+// 50/50 board (phone page and TV): the live prize, plus the draw time and countdown
+// taken from tonight's "Draw" activity. Live connections pause while the tab is hidden,
+// to keep database reads low.
 import { doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 import { db, configured } from "./firebase-init.js";
 import { GAME_ID, SITE, STALE_MS } from "./config.js";
-import { money, clock, toMillis } from "./format.js";
+import { money, clock, digits, toMillis } from "./format.js";
+import { watchActivities, drawOf, endOf } from "./activities.js";
+import { startBulbs } from "./ui.js";
 
 const $ = (id) => document.getElementById(id);
 let current = null;
-let unsub = null;
+let acts = [];
+let stops = [];
 
 $("brand").textContent = SITE.title;
 $("sub").textContent = SITE.subtitle;
@@ -18,6 +22,7 @@ function note(text) {
 }
 
 function render() {
+  const now = Date.now();
   const ok = current && typeof current.amount === "number";
   const shown = ok ? money(current.amount) : "—";
   $("amount").textContent = shown;
@@ -25,29 +30,41 @@ function render() {
   $("amount").classList.toggle("empty", !ok);
   $("updated").textContent = ok && current.updatedAt ? "Updated " + clock(current.updatedAt) : "Waiting for the first update";
   $("price").textContent = (current && current.ticketPrice) || "—";
-  $("time").textContent = (current && current.drawTime) || "—";
-  $("stale").hidden = !(ok && current.updatedAt && Date.now() - current.updatedAt > STALE_MS);
+  $("stale").hidden = !(ok && current.updatedAt && now - current.updatedAt > STALE_MS);
+
+  // The schedule's Draw activity wins; the manager's free-text draw time is the fallback.
+  const d = drawOf(acts, now);
+  $("time").textContent = d ? clock(d.start) : (current && current.drawTime) || "—";
+  const counting = d && endOf(d) > now;
+  $("count-fact").hidden = !counting;
+  if (counting) {
+    $("count-k").textContent = now >= d.start ? "DRAW" : "DRAW IN";
+    $("count").textContent = now >= d.start ? "Now!" : digits(d.start - now);
+  }
 }
 
 function listen() {
-  if (unsub || !db) return;
-  unsub = onSnapshot(doc(db, "games", GAME_ID), (snap) => {
+  if (stops.length || !db) return;
+  stops.push(onSnapshot(doc(db, "games", GAME_ID), (snap) => {
     const d = snap.exists() ? snap.data({ serverTimestamps: "estimate" }) : null;
     current = d ? { amount: d.amount, ticketPrice: d.ticketPrice, drawTime: d.drawTime, updatedAt: toMillis(d.updatedAt) } : null;
     note("");
     render();
   }, () => {
-    unsub = null;
+    stops = [];
     note("Live updates stopped. Reload the page.");
-  });
+  }));
+  stops.push(watchActivities((list) => { acts = list; render(); }, () => {}));
 }
 
 function stop() {
-  if (unsub) { unsub(); unsub = null; }
+  stops.forEach((s) => s());
+  stops = [];
 }
 
+startBulbs();
 render();
-setInterval(render, 30000);
+setInterval(render, 1000);
 
 if (!configured) {
   note("This board isn't connected yet.");

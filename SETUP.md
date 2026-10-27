@@ -1,12 +1,13 @@
-# Live Prize Board: setup guide
+# LIVENITE: setup guide
 
 This guide takes you from these files to three live web pages, with no command line. Budget about 30–45 minutes the first time.
 
 | Page | Address (once live) | Who uses it |
 |---|---|---|
-| Public | `https://livenite.github.io/` | Anyone, on phones and tablets |
-| TV | `https://livenite.github.io/tv/` | The TV at the venue |
-| Manager | `https://livenite.github.io/manage/` | Game managers, on their phones |
+| Home: tonight's itinerary | `https://livenite.github.io/` | Anyone, on phones and tablets |
+| 50/50 board | `https://livenite.github.io/5050/` | Anyone who wants the live prize |
+| 50/50 TV screen | `https://livenite.github.io/5050/tv/` | The TV at the venue (the old `/tv/` address forwards here) |
+| Managers | `https://livenite.github.io/manage/` | Managers, on their phones: 50/50 prize and activities |
 
 **Two services, two jobs.** GitHub Pages holds the pages (the shop window). Firebase holds the prize number and the manager logins (the whiteboard and the keys).
 
@@ -60,6 +61,17 @@ B7. **If a login fails with "This web address isn't approved in Firebase"**: Aut
 
 ---
 
+## Part B8: Activities (after updating the site)
+
+The **Activities** tab on the manager page needs the latest `firestore.rules`. Whenever `firestore.rules` changes, paste the whole file again: Firestore Database → **Rules** → select all, paste, **Publish**. Until you do, saving an activity fails with "permission-denied".
+
+- **Load sample night** adds 10 example activities timed around right now, so you can see live, next and finished states. **Clear all** removes every activity (tap twice).
+- **Add activity**: name, type, where, start date and time, length, host and a short teaser. Changes show on every screen within a few seconds.
+- An activity with type **Draw** sets the 50/50 draw time and countdown on the home page, the 50/50 board, the TV and the floating badge.
+- Venue names live in `assets/config.js` (`VENUES`). Edit them there on GitHub and commit.
+
+---
+
 ## Part C: First test (about 10 minutes)
 
 1. Open the **manager page** on your phone and log in as a manager.
@@ -104,11 +116,12 @@ D3. **After the first busy night**, check **Firestore Database** → **Usage** t
 
 | File | What it does |
 |---|---|
-| `index.html` | Public page for phones and tablets |
-| `tv/index.html` | TV board (no buttons, cursor hidden) |
-| `manage/index.html` | Manager login and update form |
-| `assets/config.js` | **The only file you edit**: Firebase settings and heading text |
-| `assets/board.js` | Live updates for the public and TV pages; pauses when a phone is locked to save reads |
-| `assets/manage.js` | Manager login, saving, recent updates |
-| `assets/firebase-init.js`, `assets/format.js`, `assets/shared.css` | Shared plumbing and look |
+| `index.html` | Home: tonight's itinerary, activity pages, floating 50/50 badge |
+| `5050/index.html`, `5050/tv/index.html` | 50/50 board for phones, and for the TV (no buttons, cursor hidden) |
+| `tv/index.html` | Forwards the old TV address to `5050/tv/` |
+| `manage/index.html` | Manager login, 50/50 prize and Activities tabs |
+| `assets/config.js` | **The only file you edit**: Firebase settings, venue names, 50/50 heading text |
+| `assets/home.js`, `assets/board.js`, `assets/manage.js` | Each page's behaviour; live connections pause when a phone is locked to save reads |
+| `assets/activities.js` | Reading activities and the sample night |
+| `assets/theme.css`, `assets/ui.js`, `assets/firebase-init.js`, `assets/format.js` | Shared look and plumbing |
 | `firestore.rules` | Who may read and write (paste into Firebase, step B4) |

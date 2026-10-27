@@ -24,3 +24,40 @@ export function parseAmount(text) {
 export function toMillis(ts) {
   return ts && typeof ts.toMillis === "function" ? ts.toMillis() : null;
 }
+
+export const MIN = 60000;
+
+export function pad(n) {
+  return (n < 10 ? "0" : "") + n;
+}
+
+// "9:45 p.m." split into ["9:45", "p.m."] for the timeline.
+export function clockParts(ms) {
+  const s = clock(ms);
+  const m = s.match(/^(\d{1,2}:\d{2})\s*(.*)$/);
+  return m ? [m[1], m[2]] : [s, ""];
+}
+
+// "40 min", "1 h 5 min"
+export function words(ms) {
+  const m = Math.max(0, Math.ceil(ms / MIN));
+  if (m >= 60) {
+    const h = Math.floor(m / 60), r = m % 60;
+    return h + " h" + (r ? " " + r + " min" : "");
+  }
+  return m + " min";
+}
+
+// "4:07", "1:02:30"
+export function digits(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = s % 60;
+  return h ? h + ":" + pad(m) + ":" + pad(x) : m + ":" + pad(x);
+}
+
+// Compact countdown for the round badge: "43:12", then "1h 05" when over an hour away.
+export function badgeTime(ms) {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  if (s >= 3600) return Math.floor(s / 3600) + "h " + pad(Math.floor((s % 3600) / 60));
+  return Math.floor(s / 60) + ":" + pad(s % 60);
+}

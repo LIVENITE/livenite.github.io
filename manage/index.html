@@ -5,75 +5,130 @@
 <link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex">
-<title>Update Prize</title>
+<title>LIVENITE Managers</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
-<link rel="stylesheet" href="../assets/shared.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="../assets/theme.css">
 </head>
 <body>
-<div class="manage">
-  <h1>UPDATE PRIZE</h1>
+<div class="lights" aria-hidden="true"></div>
+
+<header class="topbar">
+  <div class="wrap">
+    <a class="mark" href="../">LIVENITE</a>
+    <nav class="nav" aria-label="Main">
+      <a href="../" data-nav="home">Tonight</a>
+      <a href="../#programme" data-nav="programme">Programme</a>
+      <a href="../#venues" data-nav="venues">Venues</a>
+      <a href="../5050/" data-nav="draw">50/50</a>
+    </nav>
+    <span class="clock" id="clock" aria-label="Current time"></span>
+    <a href="./" class="mgr-link" data-nav="manage" aria-current="page">Manager login</a>
+  </div>
+</header>
+
+<main class="wrap manage">
 
   <section id="view-setup" hidden>
     <p>This page isn't connected to Firebase yet. Follow SETUP.md, step B2.</p>
   </section>
 
-  <section id="view-login" hidden>
+  <section class="login-card" id="view-login" hidden>
+    <div>
+      <p class="eyebrow">Managers only</p>
+      <h2>Log in</h2>
+    </div>
     <form id="login-form" autocomplete="on">
-      <p>Managers only. Log in with the email and password you were given.</p>
-      <div class="field">
-        <label for="l-email">EMAIL</label>
-        <input id="l-email" type="email" autocomplete="email" required>
-      </div>
-      <div class="field">
-        <label for="l-password">PASSWORD</label>
-        <input id="l-password" type="password" autocomplete="current-password" required>
-      </div>
-      <button type="submit" class="primary" id="login-btn">Log in</button>
+      <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="l-password">Password</label><input id="l-password" type="password" autocomplete="current-password" required></div>
+      <button type="submit" class="btn" id="login-btn">Log in</button>
       <div class="status" id="login-status" role="status"></div>
     </form>
   </section>
 
-  <section id="view-denied" hidden>
-    <form onsubmit="return false">
-      <p>You're logged in as <strong id="denied-email"></strong>, but this account isn't on the managers list. Ask the organizer to add you.</p>
-      <button type="button" class="secondary" id="denied-logout">Log out</button>
-    </form>
+  <section class="login-card" id="view-denied" hidden>
+    <p>You're logged in as <strong id="denied-email"></strong>, but this account isn't on the managers list. Ask the organizer to add you.</p>
+    <button type="button" class="btn ghost" id="denied-logout">Log out</button>
   </section>
 
-  <section id="view-form" hidden>
-    <form id="update-form" autocomplete="off">
-      <div class="card">
-        <div class="k">SHOWING NOW</div>
-        <div class="now" id="now-amount">&mdash;</div>
-        <div class="note" id="now-updated"></div>
+  <div id="view-app" hidden>
+    <div class="section-head">
+      <div>
+        <p class="eyebrow">Managers</p>
+        <h2>Run the night</h2>
       </div>
-      <div class="field">
-        <label for="f-amount">CURRENT PRIZE ($)</label>
-        <input id="f-amount" class="big" type="text" inputmode="decimal" placeholder="1,240">
+      <div class="signed-in"><span>Logged in as <b id="who"></b></span><button type="button" class="btn ghost" id="logout">Log out</button></div>
+    </div>
+
+    <div class="tabs" role="tablist" aria-label="What to update" style="margin-top:18px">
+      <button type="button" role="tab" id="tab-prize" aria-controls="panel-prize">50/50 prize</button>
+      <button type="button" role="tab" id="tab-acts" aria-controls="panel-acts">Activities</button>
+    </div>
+
+    <!-- 50/50 prize -->
+    <section id="panel-prize" role="tabpanel" aria-labelledby="tab-prize" style="margin-top:18px">
+      <form id="update-form" class="stack" autocomplete="off">
+        <div class="card">
+          <div class="eyebrow">Showing now</div>
+          <div class="now" id="now-amount">&mdash;</div>
+          <div class="meta" id="now-updated"></div>
+        </div>
+        <div class="field">
+          <label for="f-amount">Current prize ($)</label>
+          <input id="f-amount" class="big" type="text" inputmode="decimal" placeholder="1,240">
+        </div>
+        <div class="field">
+          <label for="f-price">Ticket price</label>
+          <input id="f-price" type="text" maxlength="40" placeholder="e.g. $5 each or 3 for $10">
+        </div>
+        <div class="field">
+          <label for="f-time">Draw time (only shown if there's no Draw activity)</label>
+          <input id="f-time" type="text" maxlength="40" placeholder="e.g. 9:30 pm">
+        </div>
+        <button type="submit" class="btn big" id="save">Update prize</button>
+        <div class="status" id="save-status" role="status"></div>
+        <div class="card">
+          <div class="eyebrow">Recent updates</div>
+          <ul id="history"></ul>
+        </div>
+      </form>
+    </section>
+
+    <!-- Activities -->
+    <section id="panel-acts" role="tabpanel" aria-labelledby="tab-acts" style="margin-top:18px" hidden>
+      <div class="stack" style="max-width:none">
+        <div class="mgr-tools">
+          <button type="button" class="btn" id="m-add">Add activity</button>
+          <button type="button" class="btn ghost" id="m-sample">Load sample night</button>
+          <button type="button" class="danger" id="m-clear" hidden>Clear all</button>
+        </div>
+        <div class="status" id="acts-status" role="status"></div>
+
+        <form class="mgr-form" id="m-form" hidden autocomplete="off">
+          <h3 class="field wide" id="m-form-title" style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">New activity</h3>
+          <div class="field wide"><label for="m-title">Activity name</label><input id="m-title" maxlength="60" required></div>
+          <div class="field"><label for="m-type">Type</label><select id="m-type"></select></div>
+          <div class="field"><label for="m-venue">Where</label><select id="m-venue"></select></div>
+          <div class="field"><label for="m-start">Starts</label><input id="m-start" type="datetime-local" required></div>
+          <div class="field"><label for="m-len">Length (minutes)</label><input id="m-len" type="number" min="5" max="360" step="5" required></div>
+          <div class="field wide"><label for="m-host">Hosted by</label><input id="m-host" maxlength="60" placeholder="e.g. DJ Marla"></div>
+          <div class="field wide"><label for="m-blurb">Teaser (what guests see)</label><textarea id="m-blurb" maxlength="200"></textarea></div>
+          <div class="form-actions">
+            <button type="submit" class="btn" id="m-save">Save</button>
+            <button type="button" class="btn ghost" id="m-cancel">Cancel</button>
+            <span class="status" id="m-status" role="status"></span>
+            <button type="button" class="danger" id="m-delete">Delete</button>
+          </div>
+        </form>
+
+        <ul class="mgr-list" id="m-list"></ul>
+        <p class="meta" style="margin:0;font-size:14px">Tip: set an activity's type to <b>Draw</b> and its time drives the 50/50 countdown everywhere.</p>
       </div>
-      <div class="field">
-        <label for="f-price">TICKET PRICE</label>
-        <input id="f-price" type="text" maxlength="40" placeholder="e.g. $5 each or 3 for $10">
-      </div>
-      <div class="field">
-        <label for="f-time">DRAW TIME</label>
-        <input id="f-time" type="text" maxlength="40" placeholder="e.g. 9:30 pm">
-      </div>
-      <button type="submit" class="primary" id="save">Update prize</button>
-      <div class="status" id="save-status" role="status"></div>
-      <div class="card">
-        <div class="k">RECENT UPDATES</div>
-        <ul id="history"></ul>
-      </div>
-      <div class="bar">
-        <span class="who" id="who"></span>
-        <button type="button" class="secondary" id="logout">Log out</button>
-      </div>
-    </form>
-  </section>
-</div>
+    </section>
+  </div>
+</main>
+
 <script type="module" src="../assets/manage.js"></script>
 </body>
 </html>
