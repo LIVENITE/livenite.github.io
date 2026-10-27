@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Live Prize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="assets/shared.css">
+</head>
+<body>
+<div class="page">
+  <header>
+    <div class="brand" id="brand"></div>
+    <div class="sub" id="sub"></div>
+  </header>
+
+  <main aria-live="polite">
+    <div class="label">CURRENT PRIZE</div>
+    <div class="amount empty" id="amount">&mdash;</div>
+    <div class="updated" id="updated">Waiting for the first update</div>
+    <div class="warn" id="stale" hidden>Prize may be out of date</div>
+  </main>
+
+  <footer>
+    <div class="facts">
+      <div class="fact"><div class="k">TICKET PRICE</div><div class="v" id="price">&mdash;</div></div>
+      <div class="fact"><div class="k">DRAW TIME</div><div class="v" id="time">&mdash;</div></div>
+    </div>
+    <div class="note" id="live-note" hidden></div>
+  </footer>
+</div>
+<script type="module" src="assets/board.js"></script>
+</body>
+</html>

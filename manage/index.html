@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<link rel="icon" href="data:,">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Update Prize</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../assets/shared.css">
+</head>
+<body>
+<div class="manage">
+  <h1>UPDATE PRIZE</h1>
+
+  <section id="view-setup" hidden>
+    <p>This page isn't connected to Firebase yet. Follow SETUP.md, step B2.</p>
+  </section>
+
+  <section id="view-login" hidden>
+    <form id="login-form" autocomplete="on">
+      <p>Managers only. Log in with the email and password you were given.</p>
+      <div class="field">
+        <label for="l-email">EMAIL</label>
+        <input id="l-email" type="email" autocomplete="email" required>
+      </div>
+      <div class="field">
+        <label for="l-password">PASSWORD</label>
+        <input id="l-password" type="password" autocomplete="current-password" required>
+      </div>
+      <button type="submit" class="primary" id="login-btn">Log in</button>
+      <div class="status" id="login-status" role="status"></div>
+    </form>
+  </section>
+
+  <section id="view-denied" hidden>
+    <form onsubmit="return false">
+      <p>You're logged in as <strong id="denied-email"></strong>, but this account isn't on the managers list. Ask the organizer to add you.</p>
+      <button type="button" class="secondary" id="denied-logout">Log out</button>
+    </form>
+  </section>
+
+  <section id="view-form" hidden>
+    <form id="update-form" autocomplete="off">
+      <div class="card">
+        <div class="k">SHOWING NOW</div>
+        <div class="now" id="now-amount">&mdash;</div>
+        <div class="note" id="now-updated"></div>
+      </div>
+      <div class="field">
+        <label for="f-amount">CURRENT PRIZE ($)</label>
+        <input id="f-amount" class="big" type="text" inputmode="decimal" placeholder="1,240">
+      </div>
+      <div class="field">
+        <label for="f-price">TICKET PRICE</label>
+        <input id="f-price" type="text" maxlength="40" placeholder="e.g. $5 each or 3 for $10">
+      </div>
+      <div class="field">
+        <label for="f-time">DRAW TIME</label>
+        <input id="f-time" type="text" maxlength="40" placeholder="e.g. 9:30 pm">
+      </div>
+      <button type="submit" class="primary" id="save">Update prize</button>
+      <div class="status" id="save-status" role="status"></div>
+      <div class="card">
+        <div class="k">RECENT UPDATES</div>
+        <ul id="history"></ul>
+      </div>
+      <div class="bar">
+        <span class="who" id="who"></span>
+        <button type="button" class="secondary" id="logout">Log out</button>
+      </div>
+    </form>
+  </section>
+</div>
+<script type="module" src="../assets/manage.js"></script>
+</body>
+</html>

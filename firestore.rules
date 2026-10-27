@@ -1,0 +1,44 @@
+rules_version = '2';
+
+// Paste this whole file into Firebase: Firestore Database > Rules > Publish.
+// Anyone can read the prize. Only managers can change it, and the history
+// can be added to but never edited or deleted.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // A manager is a logged-in user with a document at managers/<their user ID>.
+    // Those documents are added by hand in the Firebase console (SETUP.md, step B6).
+    function isManager() {
+      return request.auth != null
+        && exists(/databases/$(database)/documents/managers/$(request.auth.uid));
+    }
+
+    function validEntry() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['amount', 'ticketPrice', 'drawTime', 'updatedAt', 'updatedBy'])
+        && d.amount is number && d.amount >= 0 && d.amount <= 10000000
+        && d.ticketPrice is string && d.ticketPrice.size() <= 40
+        && d.drawTime is string && d.drawTime.size() <= 40
+        && d.updatedAt == request.time
+        && d.updatedBy == request.auth.token.email;
+    }
+
+    match /games/{gameId} {
+      allow read: if true;
+      allow create, update: if isManager() && validEntry();
+      allow delete: if false;
+
+      match /history/{entryId} {
+        allow read: if isManager();
+        allow create: if isManager() && validEntry();
+        allow update, delete: if false;
+      }
+    }
+
+    // Each user may check whether they are on the list; nobody can change it from a page.
+    match /managers/{uid} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow write: if false;
+    }
+  }
+}
