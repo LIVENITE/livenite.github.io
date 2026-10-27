@@ -1,10 +1,10 @@
 // Site settings. Fill in firebaseConfig from the Firebase console (see SETUP.md, step B2).
 // These Firebase values are designed to be public; the database rules are what protect the data.
 export const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyB84nC1bZng8iULNXHomTMbpcPNUCLdDqA",
+  authDomain: "livenite-50c69.firebaseapp.com.firebaseapp.com",
+  projectId: "livenite-50c69",
+  appId: "1:182422657948:web:9df6a9d2710fd4c4614659"
 };
 
 // Which game record the pages show. A second game later gets its own id.
