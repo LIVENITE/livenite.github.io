@@ -35,7 +35,7 @@ function watchCurrent() {
     const ok = d && typeof d.amount === "number";
     $("now-amount").textContent = ok ? money(d.amount) : "Not set yet";
     const at = d ? toMillis(d.updatedAt) : null;
-    $("now-updated").textContent = at ? "Last updated " + clock(at) + (d.updatedBy ? " by " + d.updatedBy : "") : "";
+    $("now-updated").textContent = at ? "Last updated " + clock(at) : "";
     // Fill the boxes once, so a live change never overwrites what a manager is typing.
     if (!filled) {
       filled = true;
@@ -117,20 +117,20 @@ if (!configured) {
     if (amount === null) { status("save-status", "Enter the prize as a number, like 1240 or 1,240.50.", true); return; }
     const user = auth.currentUser;
     if (!user) return;
-    const entry = {
+    // The public prize record never holds an email; who saved it goes only in the managers-only history.
+    const prize = {
       amount,
       ticketPrice: $("f-price").value.trim().slice(0, 40),
       drawTime: $("f-time").value.trim().slice(0, 40),
-      updatedAt: serverTimestamp(),
-      updatedBy: user.email
+      updatedAt: serverTimestamp()
     };
     $("save").disabled = true;
     status("save-status", "Saving…");
     try {
       // The prize and its history entry are saved together, or not at all.
       const batch = writeBatch(db);
-      batch.set(doc(db, "games", GAME_ID), entry);
-      batch.set(doc(collection(db, "games", GAME_ID, "history")), entry);
+      batch.set(doc(db, "games", GAME_ID), prize);
+      batch.set(doc(collection(db, "games", GAME_ID, "history")), { ...prize, updatedBy: user.email });
       await batch.commit();
       status("save-status", "Saved. Screens update within a few seconds.");
       loadHistory();
