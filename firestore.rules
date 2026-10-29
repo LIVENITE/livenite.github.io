@@ -1,8 +1,8 @@
 rules_version = '2';
 
 // Paste this whole file into Firebase: Firestore Database > Rules > Publish.
-// Anyone can read the prize and tonight's activities. Only managers can change
-// them, and the prize history can be added to but never edited or deleted.
+// Anyone can read the prize, tonight's activities and the site settings. Only admins
+// (people on the "managers" list) can change them, and the prize history can be added to but never edited or deleted.
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -47,18 +47,27 @@ service cloud.firestore {
       }
     }
 
-    // Tonight's activities: anyone can read them, managers add, change and remove them.
+    // Tonight's activities: anyone can read them, admins add, change and remove them.
+    // Older activities may still carry "blurb" (the tagline before it was called "tag").
+    function optStr(d, k, max) { return !(k in d) || (d[k] is string && d[k].size() <= max); }
+    function optBool(d, k) { return !(k in d) || d[k] is bool; }
+    function optList(d, k, max) { return !(k in d) || (d[k] is list && d[k].size() <= max); }
     function validActivity() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['title', 'type', 'venue', 'start', 'length', 'blurb', 'host', 'updatedAt'])
-        && d.keys().hasAll(['title', 'type', 'venue', 'start', 'length', 'blurb', 'host', 'updatedAt'])
+      return d.keys().hasOnly(['title', 'type', 'venue', 'start', 'length', 'blurb', 'tag', 'host', 'style', 'graphic',
+                               'hasManager', 'manager', 'winners', 'slots', 'resultsFinal', 'schedLength', 'updatedAt'])
+        && d.keys().hasAll(['title', 'type', 'venue', 'start', 'length', 'host', 'updatedAt'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 60
-        && d.type in ['game', 'music', 'social', 'challenge', 'draw']
+        && d.type in ['game', 'music', 'social', 'challenge', 'draw', 'tickets']
         && d.venue is string && d.venue.size() > 0 && d.venue.size() <= 30
         && d.start is timestamp
-        && d.length is int && d.length >= 5 && d.length <= 360
-        && d.blurb is string && d.blurb.size() <= 200
+        && d.length is int && d.length >= 1 && d.length <= 720
+        && (!('schedLength' in d) || (d.schedLength is int && d.schedLength >= 1 && d.schedLength <= 720))
         && d.host is string && d.host.size() <= 60
+        && optStr(d, 'blurb', 200) && optStr(d, 'tag', 80)
+        && optStr(d, 'style', 20) && optStr(d, 'graphic', 20)
+        && optBool(d, 'hasManager') && optStr(d, 'manager', 60)
+        && optList(d, 'winners', 50) && optList(d, 'slots', 200) && optBool(d, 'resultsFinal')
         && d.updatedAt == request.time;
     }
 
@@ -66,6 +75,25 @@ service cloud.firestore {
       allow read: if true;
       allow create, update: if isManager() && validActivity();
       allow delete: if isManager();
+    }
+
+    // The title section and menu admins edit: one public settings record.
+    function validSettings() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['mark', 'eyebrow', 'brand', 'tagline', 'bulbs', 'nav', 'updatedAt'])
+        && d.mark is string && d.mark.size() <= 24
+        && d.eyebrow is string && d.eyebrow.size() <= 40
+        && d.brand is string && d.brand.size() <= 24
+        && d.tagline is string && d.tagline.size() <= 80
+        && d.bulbs is bool
+        && d.nav is list && d.nav.size() <= 12
+        && d.updatedAt == request.time;
+    }
+
+    match /site/{docId} {
+      allow read: if true;
+      allow create, update: if isManager() && docId == 'settings' && validSettings();
+      allow delete: if false;
     }
 
     // Each user may check whether they are on the list; nobody can change it from a page.

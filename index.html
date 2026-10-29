@@ -4,114 +4,239 @@
 <meta charset="utf-8">
 <link rel="icon" href="data:,">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<!-- Testing only: keeps search engines from listing the site. Remove at launch if you want it findable. -->
 <meta name="robots" content="noindex">
-<title>LIVENITE Tonight</title>
+<title>LIVENITE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
-<link rel="stylesheet" href="assets/theme.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Shrikhand&family=Righteous&family=Bowlby+One&family=Monoton&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="assets/cards.css">
 </head>
 <body>
 <div class="lights" aria-hidden="true"></div>
 
 <header class="topbar">
   <div class="wrap">
-    <a class="mark" href="#">LIVENITE</a>
-    <nav class="nav" aria-label="Main">
-      <a href="#" data-nav="home">Tonight</a>
-      <a href="#programme" data-nav="programme">Programme</a>
-      <a href="#venues" data-nav="venues">Venues</a>
-      <a href="5050/" data-nav="draw">50/50</a>
-    </nav>
-    <span class="clock" id="clock" aria-label="Current time"></span>
-    <a href="manage/" class="mgr-link" data-nav="manage">Manager login</a>
+    <a class="mark" href="#" id="mark"></a>
+    <nav class="nav" id="nav" aria-label="Main"></nav>
+    <div class="drop-menu" id="draws-menu" hidden></div>
+    <a href="#admin" class="admin-link" data-nav="admin">Admin</a>
   </div>
 </header>
 
-<!-- Home: tonight's itinerary -->
+<div class="wrap">
+  <p class="preview-note" id="conn-note" role="status" hidden></p>
+</div>
+
 <main class="wrap home" id="view-home">
-  <p class="note" id="live-note" hidden></p>
-  <section aria-labelledby="brand">
+  <section aria-labelledby="brand" id="title-section">
     <div class="marquee">
       <div class="bulbs top" aria-hidden="true"></div>
-      <p class="eyebrow">Tonight's programme</p>
-      <h1 class="brand" id="brand">LIVENITE</h1>
+      <p class="eyebrow" id="eyebrow"></p>
+      <h1 class="brand" id="brand"></h1>
       <p class="tagline" id="tagline"></p>
       <div class="bulbs bottom" aria-hidden="true"></div>
     </div>
-    <div class="nownext">
-      <article class="panel" id="now-panel" aria-live="polite"></article>
-      <article class="panel" id="next-panel"></article>
-    </div>
-  </section>
-
-  <section class="pot" aria-labelledby="pot-label">
-    <div>
-      <p class="eyebrow" id="pot-label">50/50 pot right now</p>
-      <p class="pot-amt"><span id="pot">—</span><span class="pot-jump" id="pot-jump" hidden></span></p>
-      <p class="pot-sub" id="pot-sub"></p>
-    </div>
-    <a class="btn" href="5050/">Watch the pot</a>
   </section>
 
   <section id="programme" aria-labelledby="prog-title">
     <div class="section-head">
-      <h2 id="prog-title">The night's programme</h2>
-      <div class="chips" id="chips" role="group" aria-label="Filter by venue"></div>
+      <h2 id="prog-title">Tonight's line-up</h2>
     </div>
-    <ol class="timeline" id="timeline"></ol>
-  </section>
-
-  <section id="venues" aria-labelledby="venues-title">
-    <h2 id="venues-title">Around the venue</h2>
-    <div class="venues" id="venues"></div>
+    <div class="cards" id="cards"></div>
   </section>
 </main>
 
-<!-- One activity -->
 <main class="wrap detail" id="view-detail" hidden>
   <a class="back" href="#">&larr; Back to tonight</a>
-  <section class="detail-hero">
-    <div class="act-top" id="d-top"></div>
-    <h1 id="d-title"></h1>
-    <div class="facts">
-      <div class="fact"><div class="k">Where</div><div class="v" id="d-where"></div></div>
-      <div class="fact"><div class="k">When</div><div class="v" id="d-when"></div></div>
-      <div class="fact"><div class="k" id="d-count-k">Starts in</div><div class="v" id="d-count"></div></div>
-    </div>
-    <div id="d-5050" hidden><a class="btn" href="5050/">Watch the 50/50 pot</a></div>
+  <div id="d-card"></div>
+  <div class="detail-info">
+    <div class="info"><div class="eyebrow">Where</div><div class="v" id="d-where"></div></div>
+    <div class="info"><div class="eyebrow">When</div><div class="v" id="d-when"></div></div>
+    <div class="info"><div class="eyebrow" id="d-count-k">Starts in</div><div class="v" id="d-count"></div></div>
+    <div class="info"><div class="eyebrow">Hosted by</div><div class="v" id="d-host" style="font-family:var(--font-body);font-size:clamp(18px,0.6vw + 15px,26px)"></div></div>
+    <div class="info" id="d-gm-box" hidden><div class="eyebrow">Game manager</div><div class="v" id="d-gm" style="font-family:var(--font-body);font-size:clamp(18px,0.6vw + 15px,26px)"></div></div>
+  </div>
+  <section class="panel" id="d-draws-panel" hidden aria-labelledby="d-draws-title">
+    <h3 id="d-draws-title">Winning tickets</h3>
+    <p class="meta" id="d-draws-state" style="margin:0"></p>
+    <form class="search-row" id="d-search-form" role="search" autocomplete="off">
+      <div class="field"><label for="d-search">Check your ticket number</label><input id="d-search" type="search" inputmode="numeric" placeholder="e.g. 004217"></div>
+    </form>
+    <div class="draw-msg" id="d-search-msg" role="status"></div>
+    <ol class="tix" id="d-tix"></ol>
   </section>
-  <div class="detail-body">
-    <div>
-      <p class="eyebrow">What happens</p>
-      <p id="d-blurb"></p>
+  <section class="panel" id="d-win-panel" hidden aria-labelledby="d-win-title">
+    <h3 id="d-win-title">Winners</h3>
+    <ol class="winners" id="d-winners"></ol>
+    <p class="meta" id="d-no-win" style="margin:0">No winners yet. Check back after the game.</p>
+  </section>
+</main>
+
+<!-- Game management: one screen per managed game -->
+<main class="wrap admin" id="view-gm" hidden>
+  <a class="back" href="#admin">&larr; Back to Admin</a>
+  <div>
+    <p class="eyebrow">Game management</p>
+    <h2 id="gm-title"></h2>
+    <p class="meta" id="gm-who" style="margin:6px 0 0"></p>
+  </div>
+  <div class="gm-grid">
+    <section class="panel" aria-labelledby="gm-time-title">
+      <h3 id="gm-time-title">Start and end time</h3>
+      <div class="facts-2">
+        <div><div class="lbl">Start</div><div class="gm-end" id="gm-start"></div></div>
+        <div><div class="lbl">End</div><div class="gm-end" id="gm-end"></div><div class="meta" id="gm-was" hidden></div></div>
+      </div>
+      <div class="meta" id="gm-left"></div>
+      <div class="quick">
+        <button type="button" class="btn ghost" data-adjust="-5">&minus;5 min</button>
+        <button type="button" class="btn ghost" data-adjust="5">+5 min</button>
+        <button type="button" class="btn ghost" data-adjust="10">+10 min</button>
+        <button type="button" class="danger" id="gm-end-now" style="margin:0">End now</button>
+      </div>
+      <form class="inline-form" id="gm-set-form">
+        <div class="field"><label for="gm-set">Or set the end time</label><input id="gm-set" type="time"></div>
+        <button type="submit" class="btn">Set</button>
+      </form>
+      <div class="status" id="gm-time-status" role="status"></div>
+    </section>
+    <section class="panel" id="gm-pot-panel" hidden aria-labelledby="gm-pot-title">
+      <h3 id="gm-pot-title">50/50 pot</h3>
+      <div><div class="gm-end" id="gm-pot-now" style="color:var(--bulb)"></div><div class="meta" id="gm-pot-updated"></div></div>
+      <form class="editor-form" id="gm-pot-form" autocomplete="off">
+        <div class="field"><label for="gm-pot-amt">Pot amount ($)</label><input id="gm-pot-amt" type="text" inputmode="decimal" placeholder="1,240"></div>
+        <div class="field"><label for="gm-ticket">Ticket price</label><input id="gm-ticket" maxlength="40" placeholder="e.g. $5 each or 3 for $10"></div>
+        <div class="form-actions"><button type="submit" class="btn">Update pot</button><span class="status" id="gm-pot-status" role="status"></span></div>
+      </form>
+    </section>
+    <section class="panel" id="gm-draws-panel" hidden aria-labelledby="gm-draws-title" style="grid-column: 1 / -1">
+      <h3 id="gm-draws-title">Winning tickets</h3>
+      <label class="check"><input type="checkbox" id="gm-final"> All tickets drawn: end the draw and show SEARCH DRAW RESULTS on the card</label>
+      <p class="meta" id="gm-draws-count" style="margin:0"></p>
+      <p class="meta" style="margin:0;font-size:14px">Go down the list and type each winning ticket number. The label defaults to the prize number; type over it to name the prize (e.g. "Gift basket"). Tick Claimed when someone collects their prize.</p>
+      <div class="status" id="gm-draws-status" role="status"></div>
+      <ol class="slot-rows" id="gm-slots"></ol>
+      <div class="mgr-tools" style="display:flex;gap:10px;flex-wrap:wrap">
+        <button type="button" class="btn ghost" id="gm-add-slot">Add another prize</button>
+        <button type="button" class="btn ghost" id="gm-add-5">Add 5 more</button>
+      </div>
+    </section>
+    <section class="panel" id="gm-win-panel" aria-labelledby="gm-win-title">
+      <h3 id="gm-win-title">Winners</h3>
+      <form class="inline-form" id="gm-win-form" autocomplete="off">
+        <div class="field"><label for="gm-win-name">Winner's name</label><input id="gm-win-name" maxlength="60" placeholder="e.g. Sam K. or Table 6"></div>
+        <div class="field" id="gm-ticketno-field" hidden><label for="gm-ticketno">Winning ticket number</label><input id="gm-ticketno" maxlength="12" inputmode="numeric" placeholder="e.g. 004217"></div>
+        <button type="submit" class="btn">Add winner</button>
+      </form>
+      <ol class="win-list" id="gm-win-list"></ol>
+      <div class="status" id="gm-win-status" role="status"></div>
+    </section>
+  </div>
+  <div id="gm-card" style="max-width:420px"></div>
+  <a class="btn ghost" id="gm-page" href="#" style="align-self:flex-start">See the game page</a>
+</main>
+
+<main class="wrap admin" id="view-admin" hidden>
+  <a class="back" href="#">&larr; Back to tonight</a>
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h2>Site settings</h2>
+  </div>
+
+  <section class="panel login-box" id="admin-login" hidden aria-labelledby="l-title">
+    <h3 id="l-title">Admin login</h3>
+    <form id="login-form" class="editor-form" autocomplete="on" style="grid-template-columns:1fr">
+      <div class="field"><label for="l-email">Email</label><input id="l-email" type="email" autocomplete="email" required></div>
+      <div class="field"><label for="l-password">Password</label><input id="l-password" type="password" autocomplete="current-password" required></div>
+      <div class="form-actions"><button type="submit" class="btn" id="login-btn">Log in</button><span class="status" id="login-status" role="status"></span></div>
+    </form>
+  </section>
+
+  <section class="panel login-box" id="admin-denied" hidden>
+    <p style="margin:0">You're logged in as <strong id="denied-email"></strong>, but this account isn't on the admin list. Ask the organizer to add you.</p>
+    <button type="button" class="btn ghost" id="denied-logout" style="align-self:flex-start">Log out</button>
+  </section>
+
+  <div id="admin-app" hidden style="display:contents">
+  <div class="signed-in"><span>Logged in as <b id="who"></b></span><button type="button" class="btn ghost" id="logout">Log out</button><span class="status" id="a-status" role="status"></span></div>
+
+  <section class="panel" aria-labelledby="t-title">
+    <h3 id="t-title">Title section</h3>
+    <div class="grid2">
+      <div class="field"><label for="a-eyebrow">Small line above the title</label><input id="a-eyebrow" maxlength="40"></div>
+      <div class="field"><label for="a-brand">Big title</label><input id="a-brand" maxlength="24"></div>
     </div>
-    <div>
-      <p class="eyebrow">Hosted by</p>
-      <p id="d-host"></p>
-      <p class="eyebrow" style="margin-top:18px">Also in this venue</p>
-      <ul id="d-more"></ul>
+    <div class="field"><label for="a-tagline">Tagline (leave empty to count tonight's activities)</label><input id="a-tagline" maxlength="80"></div>
+    <label class="check"><input type="checkbox" id="a-bulbs"> Show the marquee light bulbs</label>
+  </section>
+
+  <section class="panel" aria-labelledby="n-title">
+    <h3 id="n-title">Navigation bar</h3>
+    <div class="field"><label for="a-mark">Logo text (top left)</label><input id="a-mark" maxlength="24"></div>
+    <span class="lbl">Menu items: rename, show or hide, reorder</span>
+    <ul class="nav-rows" id="a-nav"></ul>
+  </section>
+
+  <section class="panel" aria-labelledby="acts-title">
+    <div class="section-head">
+      <h3 id="acts-title">Activities</h3>
+      <button type="button" class="btn" id="m-add">Add activity</button>
     </div>
+    <p class="preview-note" style="padding:0">Each mini card shows the activity's look and graphic. <b>Suggested</b> picks an icon from the name (bingo → bingo ball, karaoke → microphone), otherwise from the type. <b>Auto pattern</b> cycles the patterns down the line-up.</p>
+    <div class="status" id="m-done" role="status"></div>
+
+    <div class="editor" id="m-editor" hidden>
+      <form class="editor-form" id="m-form" autocomplete="off">
+        <h4 id="m-form-title">Edit activity</h4>
+        <div class="field wide"><label for="m-title">Activity name</label><input id="m-title" maxlength="60" required></div>
+        <div class="field wide"><label for="m-tag">Tagline</label><input id="m-tag" maxlength="80" placeholder="e.g. Three notes. Four teams. One buzzer."></div>
+        <div class="field"><label for="m-type">Type</label><select id="m-type"></select></div>
+        <div class="field"><label for="m-venue">Where</label><select id="m-venue"></select></div>
+        <div class="field"><label for="m-start">Starts at</label><input id="m-start" type="datetime-local" required></div>
+        <div class="field"><label for="m-len">Length (minutes)</label><input id="m-len" type="number" min="5" max="360" step="5" required></div>
+        <div class="field wide"><label for="m-host">Hosted by</label><input id="m-host" maxlength="60"></div>
+        <label class="check wide"><input type="checkbox" id="m-hasgm"> This game has a game manager</label>
+        <div class="field wide" id="m-gm-field" hidden><label for="m-gm">Game manager's name</label><input id="m-gm" maxlength="60" placeholder="e.g. Quizmaster Jo"></div>
+        <div class="field"><label for="m-look">Card look</label><select id="m-look"></select></div>
+        <div class="field"><label for="m-graphic">Graphic</label><select id="m-graphic"></select></div>
+        <div class="form-actions">
+          <button type="submit" class="btn">Save</button>
+          <button type="button" class="btn ghost" id="m-cancel">Cancel</button>
+          <span class="status" id="m-status" role="status"></span>
+          <button type="button" class="danger" id="m-delete">Delete</button>
+        </div>
+      </form>
+      <div class="editor-preview">
+        <span class="lbl">Live preview</span>
+        <div id="m-preview"></div>
+      </div>
+    </div>
+
+    <ul class="act-rows" id="m-list"></ul>
+    <div class="mgr-tools" style="display:flex;gap:10px;flex-wrap:wrap">
+      <button type="button" class="btn ghost" id="m-sample">Load sample night</button>
+      <button type="button" class="danger" id="m-clear" style="margin:0" hidden>Clear all</button>
+    </div>
+  </section>
   </div>
 </main>
 
 <div class="float-pot" id="float-pot" hidden>
-  <a class="fp-link" href="5050/" id="fp-link">
-    <span class="fp-label">50/50</span>
+  <a class="fp-link" href="#a-draw" id="fp-link">
+    <span class="fp-label" id="fp-label">50/50</span>
     <span class="fp-amt" id="fp-amt"></span>
     <span class="fp-when" id="fp-when"></span>
   </a>
   <button type="button" class="fp-close" id="fp-close" aria-label="Hide the 50/50 countdown">&times;</button>
 </div>
 
-<footer class="site-footer">
+<footer>
   <div class="wrap">
-    <span>LIVENITE · times update live from the hosts</span>
-    <a href="tv/">TV screen</a>
+    <span>LIVENITE · <a href="5050/tv/">50/50 TV screen</a></span>
+    <a href="#admin">Admin</a>
   </div>
 </footer>
 
-<script type="module" src="assets/home.js"></script>
+<script type="module" src="assets/site.js"></script>
 </body>
 </html>
