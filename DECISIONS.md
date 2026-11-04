@@ -24,6 +24,11 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Design previews run the live site's code with a copy of the live data held inside the preview page. Changes there save only on that page, and reloading starts again from the copy.
 - The admin list and the 50/50 history are never copied into previews, because they contain account emails.
 
+**Design work lives on the `design` branch on GitHub** (Nov 4, 2026)
+- The repository has two branches (parallel copies of the files). **main** is what GitHub Pages publishes to https://livenite.github.io/. **design** holds the work in progress: site changes not yet live, DATA-RULES.md, this log, TODO.md, the preview-only demo mode and the tools that build the design preview.
+- Why: nothing on `design` can reach the live site by accident, the documents stay next to the code they describe, and work can be picked up later from GitHub.
+- Publishing means copying the site files from `design` onto `main` (leaving `preview-only/` and `preview-tools/` behind), and only with an explicit go-ahead.
+
 **Demo mode exists only in previews, never on the live site** (Nov 4, 2026)
 - Demo mode lets an admin pretend it's a different time, to see the night as guests would.
 - Why: on the live site, an admin who left it on could save real activity times based on a pretend clock.
