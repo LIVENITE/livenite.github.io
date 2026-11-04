@@ -53,6 +53,12 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - The 50/50 has a single pot, countdown and floating badge, so there can only be one.
 - "Draws" (prize ticket draws) can be added as many times as needed. Each gets its own menu link, and more than two fold into one "Draws ▾" dropdown.
 
+**Activities can be up to 12 hours long everywhere** (Nov 4, 2026)
+- The activity editor used to stop at 6 hours, while game screens and the run sheet allowed 12. They now all allow 12, matching the longest possible event. The editor still asks for at least 5 minutes.
+
+**Only one 50/50, enforced by the database too** (Nov 4, 2026)
+- Previously only the page stopped a second 50/50, so two admins saving at the same instant could both succeed. Now the database keeps one "50/50 slot" record naming the 50/50, and making an activity the 50/50 must claim it in the same save. Only one claim can win.
+
 **Activities can share a venue at the same time** (Nov 3, 2026)
 - Overlaps at the same venue are allowed and shown as a text note ("OK if planned"), never blocked and never highlighted on the timeline.
 
@@ -150,6 +156,9 @@ Dates before November 2 are approximate: those decisions were made in conversati
 
 **Data rules first** (Nov 2, 2026)
 - DATA-RULES.md covers how every screen edits, saves and deletes data. Every change is checked against it, and against its test checklist, before it ships.
+
+**Automated tests live in the repository** (Nov 4, 2026)
+- The tests are in `tests/` on the `design` branch, runnable with `bash tests/run.sh` (see `tests/README.md`), so any future session can rerun them. Each rule in LOGIC-RULES.md names the test that checks it.
 
 **LOGIC-RULES.md is a living technical reference** (Nov 4, 2026)
 - It describes exactly how the site behaves, as rules with permanent IDs (for example `CARD-1`, `EVT-3`). Each rule names the code that does it and the test that checks it.

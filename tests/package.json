@@ -1,0 +1,12 @@
+{
+  "name": "livenite-tests",
+  "private": true,
+  "type": "module",
+  "description": "Automated checks for LIVENITE. See tests/README.md.",
+  "dependencies": {
+    "@firebase/rules-unit-testing": "^4.0.1",
+    "firebase": "^11.0.2",
+    "firebase-tools": "^13.29.1",
+    "playwright-core": "^1.48.2"
+  }
+}

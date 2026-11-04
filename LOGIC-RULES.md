@@ -10,7 +10,7 @@ The precise behaviour of the site, written as rules: what the code does, not wha
 
 - **IDs are permanent.** Each rule has an ID (`AREA-n`). Rewording a rule keeps its ID. A removed rule is marked **Retired** with the date, and its ID is never reused. New rules take the next free number in their area.
 - **Same change, same commit.** A change to behaviour isn't finished until its rule is updated here, in the same commit as the code (see `DATA-RULES.md`, rule 9).
-- **Each rule cites its code and its check.** *Code* names the function or rule block. *Check* names the automated test that proves it, or **none** if there isn't one yet.
+- **Each rule cites its code and its check.** *Code* names the function or rule block. *Check* names the automated test in `tests/` that proves it (for example `preview-run-sheet` is `tests/preview-run-sheet.test.mjs`), or **none** if there isn't one yet. Run them all with `bash tests/run.sh` (see `tests/README.md`).
 - **Disagreements go to Open questions,** never silently resolved.
 - **Record every change in the Change history** at the bottom.
 
@@ -31,18 +31,16 @@ The precise behaviour of the site, written as rules: what the code does, not wha
 - `upcoming` otherwise
 
 Start is inclusive and end is exclusive.
-*Code:* `stateOf()`. *Check:* `startnow.mjs`, `demo.mjs` (indirectly).
+*Code:* `stateOf()`. *Check:* `preview-startnow`, `preview-demo` (indirectly).
 
 **TIME-2. Next up.** The *next* activity is the one with the earliest `start > now`, across all types. Every other upcoming activity is *later*.
 *Code:* `nextUp()`, `cardFor()`.
 
 **TIME-3. Length limits.**
-- Activity editor: 5–360 minutes.
-- Game screens and the run sheet: 1–720 minutes.
-- Database: 1–720 minutes.
-
-See Open question Q1.
-*Code:* `m-form` submit, `moveEnd()`, `validActivity()`. *Check:* `rules.test.mjs`.
+- Everywhere: at most 720 minutes (12 hours).
+- Activity editor minimum: 5 minutes.
+- Game screens, the run sheet and the database minimum: 1 minute (so "End now" can end something a minute after it started).
+*Code:* `m-form` submit, `moveEnd()`, `validActivity()`. *Check:* `database-rules`.
 
 **TIME-4. Moved-on-the-night record (`schedLength`).**
 - On a game screen, the first save that changes the length records the previous length as `schedLength`. The game screen then shows "Scheduled: [original end]".
@@ -72,7 +70,7 @@ See Open question Q1.
 | 8 | `done` | "Finished" |
 | 9 | otherwise (*later*) | "[length] min" |
 
-*Code:* `cardFor()`. *Check:* `sofar.mjs` (rows 4 and 2), `demo.mjs` (rows 1, 3, 7). Rows 5, 6, 8 and 9 are none.
+*Code:* `cardFor()`. *Check:* `preview-sofar` (rows 4 and 2), `preview-demo` (rows 1, 3, 7). Rows 5, 6, 8 and 9 are none.
 
 **CARD-2. Winners on cards.** A card lists its winners ("Winner" / "Winners: a · b") only when the activity is `done` and has at least one winner.
 *Code:* `cardFor()`.
@@ -118,7 +116,7 @@ See Open question Q1.
 *Code:* `renderChrome()`.
 
 **LINEUP-3. Event times line.** When both event times are set, the home page shows "[Day, Mon D] · [start] – [end]" under the tagline. Otherwise it shows nothing.
-*Code:* `renderChrome()`, `fullWhen()`. *Check:* `rs-design.mjs`, `rs-emu.mjs`.
+*Code:* `renderChrome()`, `fullWhen()`. *Check:* `preview-run-sheet`, `emu-run-sheet`.
 
 **LINEUP-4. Menu.**
 - Items show in the admin's order, and hidden items are skipped.
@@ -132,11 +130,17 @@ See Open question Q1.
 
 ## TYPE: activity types
 
-**TYPE-1. One 50/50.**
-- At most one activity can have type `draw`.
-- The editor disables the option when another 50/50 exists, and refuses the save if one is forced.
+**TYPE-1. One 50/50.** At most one activity can have type `draw`.
+- **Page:** the editor disables the option when another 50/50 exists, and refuses the save if one is forced.
+- **Database:** the record `site/fiftyFifty` (`{ activityId, updatedAt }`) names the activity that is the 50/50.
+  - Making an activity the 50/50 (creating one, or changing an activity's type to `draw`) must claim that record in the same save.
+  - The claim is refused unless the record names this same activity, or the activity it names is gone or is no longer a 50/50.
+  - Saving an activity that's already the 50/50 needs no claim.
+  - Two admins making a 50/50 at the same moment can't both succeed: there's only one record to claim.
+- **Saves that claim it:** the editor (new 50/50, or a change to 50/50) and Load sample night.
+- If the database refuses a claim, the editor says another activity was just made the 50/50.
 
-*Code:* `otherDraw()`, `openEditor()`, `m-form` submit. Not enforced by the database (Q3). *Check:* none in current tests.
+*Code:* `otherDraw()`, `openEditor()`, `m-form` submit, `fiftyFiftyOk()` and `validFiftyFifty()` (rules). *Check:* `database-rules` (7 checks), `emu-run-sheet` (sample night claims it).
 
 **TYPE-2. Any number of Draws.** A new Draws starts with 10 empty prizes. Changing an existing activity to Draws gives it 10 if it has none.
 *Code:* `formActivity()`, `m-form` submit.
@@ -161,7 +165,7 @@ At most 200 prizes.
 - Ticket numbers are compared after removing everything except letters and digits, uppercasing, and removing leading zeros (keeping at least one character). So "1388", "001388" and "00-1388" all match.
 - A search hit needs an exact match after this cleanup.
 
-*Code:* `cleanNo()`, `renderTickets()`. *Check:* `wname.mjs`.
+*Code:* `cleanNo()`, `renderTickets()`. *Check:* `preview-wname`.
 
 **DRAW-3. Search messages.**
 - **Hit:** "Ticket [t] is a winner! [label], won by [name]" (the name part only if set, and its trailing full stop removed). Then either ". This prize has been claimed." or ". Collect it at the prize desk."
@@ -175,7 +179,7 @@ At most 200 prizes.
 - A prize that's in the draft but not yet saved can't be ticked.
 
 See Known limit L1.
-*Code:* `saveClaim()`. *Check:* `rules-preview.mjs`, `rules-emu.mjs`.
+*Code:* `saveClaim()`. *Check:* `preview-save-rules`, `emu-two-phones-offline`.
 
 **DRAW-5. Saving the ticket list.**
 - "Save ticket list" saves the draft's labels, tickets, names, added and removed rows, and the `resultsFinal` setting, in one transaction.
@@ -190,7 +194,7 @@ See Known limit L1.
 - Saving `resultsFinal = true` while the draw is `live` also ends it: `length = max(1, floor((now − start) / 1 min))`, with `schedLength` recorded per TIME-4.
 - Unticking and saving sets `resultsFinal = false` but doesn't restart the draw.
 
-*Code:* `slotsArea.save`. *Check:* none on this code (only tested on the earlier mockup, `finalend.mjs`).
+*Code:* `slotsArea.save`. *Check:* none yet (an earlier mockup was tested, but that test wasn't carried over).
 
 **DRAW-8. Draw page status box.** Shows Drawing now, Results posted, Results so far, Results soon or "Draw at [start]", following CARD-1's precedence.
 **DRAW-9. Draw page list heading.**
@@ -214,7 +218,7 @@ Draws pages have no winners panel.
   - `live` with a winner → "Winner drawn";
   - `done` → "After".
 
-*Code:* `renderGuide()`. *Check:* `guide.mjs`.
+*Code:* `renderGuide()`. *Check:* `preview-guide`.
 
 ---
 
@@ -225,7 +229,7 @@ Draws pages have no winners panel.
 - Each save also adds a history entry with the saver's email. Only admins can read history, and it can't be edited or deleted.
 - `amount` is 0–10 000 000. "1,240.50" is accepted and rounded to cents.
 
-*Code:* `potArea.save`, `parseAmount()`, `validPublic()`, `validHistory()`. *Check:* `rules.test.mjs`.
+*Code:* `potArea.save`, `parseAmount()`, `validPublic()`, `validHistory()`. *Check:* `database-rules`.
 
 **POT-2. Floating badge.** The badge shows when all of these are true:
 - a 50/50 exists;
@@ -247,7 +251,7 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 ## GAME: game screens (time controls)
 
 **GAME-1. Start now.** The draft start becomes now, rounded down to the minute. The length stays the same, so the end moves with it.
-*Code:* `gm-start-now` handler. *Check:* `startnow.mjs`.
+*Code:* `gm-start-now` handler. *Check:* `preview-startnow`.
 
 **GAME-2. End now.**
 - The draft length becomes `max(1, floor((now − draft start) / 1 min))`.
@@ -266,14 +270,14 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 - Saves only what changed: `start`, and `length` plus `schedLength` per TIME-4.
 - Refused if the result breaks EVT-3.
 
-*Code:* `timeArea`. *Check:* `startnow.mjs`.
+*Code:* `timeArea`. *Check:* `preview-startnow`.
 
 **GAME-5. Winners.**
 - "Add to list" and × change the draft.
 - "Save winners" runs a transaction on the latest list: removes the first occurrence of each removed name, then appends the added names.
 - Maximum 50 winners.
 
-*Code:* `winArea`. *Check:* `rules-emu.mjs` (two phones).
+*Code:* `winArea`. *Check:* `emu-two-phones-offline` (two phones).
 
 ---
 
@@ -284,7 +288,7 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 - `eventEnd > eventStart` and `eventEnd − eventStart ≤ 12 h`.
 
 The database enforces all of this.
-*Code:* `validEventTimes()` (rules), `rsEvCheck()`. *Check:* `rules.test.mjs`, `rs-design.mjs`.
+*Code:* `validEventTimes()` (rules), `rsEvCheck()`. *Check:* `database-rules`, `preview-run-sheet`.
 
 **EVT-2. Unset means unconstrained.** With no event times, no activity is checked against event hours. The run sheet spans all activities and prompts for times.
 *Code:* `eventWin()`, `windowProblem()`, `renderTimeline()`.
@@ -296,16 +300,16 @@ The database enforces all of this.
 So a move can't take an activity outside the event, and one already outside can only move closer. A new activity must be fully inside.
 
 Applies to the activity editor, game screens and run sheet moves. The database applies the same test to the settings as they'll be **after** the save (`getAfter`), so extending the event in the same save counts.
-*Code:* `windowProblem()`, `rsSetDraft()`, `timesInEvent()` / `insideOrCloser()` (rules). *Check:* `rules.test.mjs`, `rs-design.mjs`, `rs-emu.mjs`.
+*Code:* `windowProblem()`, `rsSetDraft()`, `timesInEvent()` / `insideOrCloser()` (rules). *Check:* `database-rules`, `preview-run-sheet`, `emu-run-sheet`.
 
 **EVT-4. Unmoved saves always pass.** A save that leaves `start` and `length` unchanged (winners, tickets, labels, look) is never refused by EVT-3.
-*Code:* `unmoved()` (rules). *Check:* `rules.test.mjs`.
+*Code:* `unmoved()` (rules). *Check:* `database-rules`.
 
 **EVT-5. Setting times for the first time.** Allowed even if activities fall outside. Those are then flagged as outside.
 *Code:* `ev-save` handler.
 
 **EVT-6. No stranding.** Changing existing event times is refused if any activity currently fully inside would end up outside. The page checks this; the database can't, because it can't scan all activities in a rule (Q4).
-*Code:* `ev-save` handler. *Check:* none on this code (only tested on the run sheet mockup, `savebug.mjs`).
+*Code:* `ev-save` handler. *Check:* none yet (the run sheet mockup was tested, but that test wasn't carried over).
 
 **EVT-7. Outside, explained.** Activities outside event hours are labelled:
 - "Not during the event" (no overlap with the event at all);
@@ -341,7 +345,7 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 - The result must be **fully inside** the event, which is stricter than EVT-3.
 - For an activity that's outside, it suggests the same time of day on the first event date where it fits.
 
-*Code:* `dateTimePick()`, `rsSuggestedStart()`. *Check:* `rs-design.mjs`.
+*Code:* `dateTimePick()`, `rsSuggestedStart()`. *Check:* `preview-run-sheet`.
 
 **RS-5. Running late.**
 - Moves every activity that is upcoming (by saved times), at least partly inside the event, and starts after the chosen point ("Now", or a chosen activity, which is itself included).
@@ -355,14 +359,14 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 - If a push would end past the event's end, the panel warns and offers "Extend the event to [time]", rounded up to the quarter hour. That's greyed out if it would exceed 12 h.
 - At Save all, any draft breaking EVT-3 blocks the save. The bar then offers "Extend event to [time] & save all", rounded out to quarter hours, if the result is ≤ 12 h.
 
-*Code:* `rsViolations()`, `renderRsSaveBar()`. *Check:* `rs-design.mjs`, `rs-emu.mjs`.
+*Code:* `rsViolations()`, `renderRsSaveBar()`. *Check:* `preview-run-sheet`, `emu-run-sheet`.
 
 **RS-7. Save all.** One batch:
 - for each changed activity, only the changed fields of `start`, `length` and `venue`;
 - plus the new event times when extending.
 
 The database checks EVT-3 against the event times after the save.
-*Code:* `rsSaveAll()`. *Check:* `rs-emu.mjs`.
+*Code:* `rsSaveAll()`. *Check:* `emu-run-sheet`.
 
 **RS-8. Overlaps.** Two activities overlap when they share a venue and their times intersect. This shows as text ("⚠ N overlapping (OK if planned)", or a note in the editing panel). It's never highlighted and never blocks.
 *Code:* `rsOverlaps()`.
@@ -391,7 +395,7 @@ The database checks EVT-3 against the event times after the save.
 **ACC-1. Guests** can read activities, site settings and the 50/50 pot, without logging in.
 **ACC-2. Admins** are logged-in users with a document at `managers/{uid}`. Only admins can create, update or delete activities, save site settings, save the pot, and read pot history. No one can add themselves to the admin list from a page.
 **ACC-3. Field checks.** The database checks every saved activity's fields (types, sizes, allowed fields) whatever the page sends, and requires `updatedAt` to be the server's time.
-*Code:* `firestore.rules`. *Check:* `rules.test.mjs` (71 tests).
+*Code:* `firestore.rules`. *Check:* `database-rules` (78 checks).
 
 **ACC-4. Game managers** (planned): see TODO.md.
 
@@ -404,7 +408,7 @@ The database checks EVT-3 against the event times after the save.
 - It applies to every time-based rule on the page.
 - It's stored in this browser only (`localStorage`) and survives reloads.
 
-*Code:* `preview-only/demo.js`. *Check:* `demo.mjs`.
+*Code:* `preview-only/demo.js`. *Check:* `preview-demo`.
 
 **DEMO-2. Never live.** Demo mode is added by `preview-tools/build.py` and isn't in any published file (see DECISIONS.md).
 
@@ -412,17 +416,21 @@ The database checks EVT-3 against the event times after the save.
 
 ## Open questions
 
-- **Q1. Length limits differ.** The activity editor allows 5–360 minutes, while game screens, the run sheet and the database allow 1–720. Should they match?
 - **Q2. `schedLength` is inconsistent.** Game screens record the original length, the editor clears it, and the run sheet leaves it alone. Should run sheet moves record "Scheduled" too?
-- **Q3. One 50/50 isn't enforced by the database.** Two admins could each create a 50/50 at the same moment. Rare, but possible.
 - **Q4. No-stranding is page-only.** The database can't check EVT-6. A buggy or out-of-date page could shrink the event around activities.
 - **Q5. Winners' names on Draws are public.** Still undecided (see TODO.md).
-- **Q6. Automated tests aren't in the repository.** The tests named under *Check* live in the development workspace, not on GitHub, so a future session can't rerun them. Suggest adding them to the `design` branch (a `tests/` folder).
 
 ## Known limits
 
 - **L1.** Claimed is matched by position (DRAW-4). If someone saves a list with a prize removed while another person ticks Claimed on the same draw, the tick can land on the wrong prize. Fix: give each prize a permanent ID.
 
+## Resolved questions
+
+- **Q1 (2026-11-04).** Length limits differed (editor 5–360 minutes, elsewhere 1–720). Resolved: the editor now allows up to 720 minutes too. See TIME-3.
+- **Q3 (2026-11-04).** One 50/50 wasn't enforced by the database. Resolved: the database now requires claiming `site/fiftyFifty`. See TYPE-1.
+- **Q6 (2026-11-04).** Tests weren't in the repository. Resolved: they're in `tests/`, with `tests/run.sh` and `tests/README.md`.
+
 ## Change history
 
 - **2026-11-04:** First version, written from the code on the `design` branch (commit `373b5d3`).
+- **2026-11-04:** TIME-3 (editor allows 720 minutes), TYPE-1 (one 50/50 enforced by the database), ACC-3 (78 checks). Tests moved into `tests/`, and every *Check* now names a test there. Q1, Q3 and Q6 resolved.

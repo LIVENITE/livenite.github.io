@@ -687,13 +687,17 @@ $("m-form").addEventListener("submit", function (e) {
   if ($("m-type").value === "draw" && otherDraw(editing)) { setStatus("m-status", "There's already a 50/50 (" + otherDraw(editing).title + "). There can only be one.", true); return; }
   if ($("m-hasgm").checked && !$("m-gm").value.trim()) { setStatus("m-status", "Add the game manager's name, or switch the game manager off.", true); return; }
   var len = parseInt($("m-len").value, 10);
-  if (!(len >= 5 && len <= 360)) { setStatus("m-status", "Length must be between 5 and 360 minutes.", true); return; }
+  if (!(len >= 5 && len <= 720)) { setStatus("m-status", "Length must be between 5 and 720 minutes (12 hours).", true); return; }
   var ns = new Date($("m-start").value).getTime(), wp = isNew ? windowProblem(null, null, ns, ns + len * MIN) : windowProblem(startOf(editing), endOf(editing), ns, ns + len * MIN);
   if (wp) { setStatus("m-status", wp + " Change the event times on the run sheet first if the night is longer.", true); return; }
   var v = editorValues(), save;
+  // Making an activity the 50/50 claims the 50/50 slot in the same save (LOGIC-RULES TYPE-1).
+  var becomesDraw = v.type === "draw" && (isNew || editorBase.type !== "draw");
   if (isNew) {
     var f = formActivity(); f.schedLen = null;
-    save = addDoc(collection(db, "activities"), toDoc(f));
+    var newRef = doc(collection(db, "activities"));
+    if (becomesDraw) { var nb = writeBatch(db); nb.set(newRef, toDoc(f)); nb.set(doc(db, "site", "fiftyFifty"), { activityId: newRef.id, updatedAt: serverTimestamp() }); save = nb.commit(); }
+    else save = setDoc(newRef, toDoc(f));
   } else {
     var fields = {};
     Object.keys(EDITOR_FIELDS).forEach(function (k) { if (v[k] !== editorBase[k]) fields[EDITOR_FIELDS[k]] = k === "title" ? v[k].slice(0, 60) : k === "tag" ? v[k].slice(0, 80) : v[k]; });
@@ -704,7 +708,9 @@ $("m-form").addEventListener("submit", function (e) {
     // Turning an activity into a Draws gives it a numbered prize list if it has none.
     if (fields.type === "tickets" && !(byId(editing.id) || editing).slots.length) fields.slots = newSlots(10);
     if (!Object.keys(fields).length) { setStatus("m-status", "No changes to save."); return; }
-    save = updateDoc(doc(db, "activities", editing.id), Object.assign(fields, { updatedAt: serverTimestamp() }));
+    var ref = doc(db, "activities", editing.id);
+    if (becomesDraw) { var ub = writeBatch(db); ub.update(ref, Object.assign(fields, { updatedAt: serverTimestamp() })); ub.set(doc(db, "site", "fiftyFifty"), { activityId: editing.id, updatedAt: serverTimestamp() }); save = ub.commit(); }
+    else save = updateDoc(ref, Object.assign(fields, { updatedAt: serverTimestamp() }));
   }
   setStatus("m-status", "Saving…");
   var slow = setTimeout(function () { setStatus("m-status", "Still saving… check your signal. Your changes are kept and save when you're back online.", true); }, 8000);
@@ -712,7 +718,11 @@ $("m-form").addEventListener("submit", function (e) {
     clearTimeout(slow);
     closeEditor();
     ok("m-done", "Saved “" + v.title + "”. Every screen shows it now.");
-  }, function (err) { clearTimeout(slow); setStatus("m-status", "Could not save (" + errText(err) + "). Your changes are still here; try again.", true); });
+  }, function (err) {
+    clearTimeout(slow);
+    if (becomesDraw && errText(err) === "permission-denied") { setStatus("m-status", "Could not save: another activity was just made the 50/50, and there can only be one. Pick another type.", true); return; }
+    setStatus("m-status", "Could not save (" + errText(err) + "). Your changes are still here; try again.", true);
+  });
 });
 $("m-delete").addEventListener("click", function () {
   if (!editing) return;
@@ -761,7 +771,11 @@ $("m-sample").addEventListener("click", function () {
   var batch = writeBatch(db);
   // Only one 50/50, so the sample skips its own if there's one already.
   var sample = sampleNight(Date.now()).filter(function (a) { return !(hasDraw && a.type === "draw"); });
-  sample.forEach(function (a) { batch.set(doc(collection(db, "activities")), toDoc(a)); });
+  sample.forEach(function (a) {
+    var r = doc(collection(db, "activities"));
+    batch.set(r, toDoc(a));
+    if (a.type === "draw") batch.set(doc(db, "site", "fiftyFifty"), { activityId: r.id, updatedAt: serverTimestamp() });
+  });
   // The sample comes with its own event times (saved in the same step), so the event-hours rules accept it.
   var evS = Math.min.apply(null, sample.map(function (a) { return a.start; })), evE = Math.max.apply(null, sample.map(function (a) { return a.start + a.len * MIN; }));
   var ef = { eventStart: Timestamp.fromMillis(evS), eventEnd: Timestamp.fromMillis(evE), updatedAt: serverTimestamp() }, sref = doc(db, "site", "settings");

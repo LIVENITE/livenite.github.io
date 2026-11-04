@@ -29,8 +29,9 @@ var autoId = 0;
 function newId() { autoId++; return "d" + Date.now().toString(36) + autoId; }
 // doc(collectionRef) with no id is how a batch asks for a new record; it gets its id when saved.
 function doc(first) {
-  if (arguments.length === 1 && first && first.kind === "coll") return { kind: "new", path: first.path };
-  return { kind: "doc", path: Array.prototype.slice.call(arguments, 1).join("/") };
+  if (arguments.length === 1 && first && first.kind === "coll") { var nid = newId(); return { kind: "doc", path: first.path + "/" + nid, id: nid }; }
+  var path = Array.prototype.slice.call(arguments, 1).join("/");
+  return { kind: "doc", path: path, id: path.split("/").pop() };
 }
 function collection() { return { kind: "coll", path: Array.prototype.slice.call(arguments, 1).join("/") }; }
 function orderBy(field) { return { orderBy: field }; }

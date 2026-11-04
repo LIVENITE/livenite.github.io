@@ -86,9 +86,19 @@ service cloud.firestore {
         && (end <= ev.eventEnd || (resource != null && end <= resource.data.start + duration.value(resource.data.length, 'm')));
     }
 
+    // Only one 50/50. The record site/fiftyFifty names the activity that is the 50/50, and making an
+    // activity the 50/50 (creating one, or changing its type) must claim that record in the same save.
+    // An activity that's already the 50/50 can be saved as usual.
+    function fiftyFiftyOk(activityId) {
+      let lock = /databases/$(database)/documents/site/fiftyFifty;
+      return request.resource.data.type != 'draw'
+        || (resource != null && resource.data.type == 'draw')
+        || (existsAfter(lock) && getAfter(lock).data.activityId == activityId);
+    }
+
     match /activities/{activityId} {
       allow read: if true;
-      allow create, update: if isManager() && validActivity();
+      allow create, update: if isManager() && validActivity() && fiftyFiftyOk(activityId);
       allow delete: if isManager();
     }
 
@@ -114,9 +124,19 @@ service cloud.firestore {
             && d.eventEnd <= d.eventStart + duration.value(12, 'h'));
     }
 
+    // The 50/50 slot can move to a new activity only if the one it names is gone or no longer a 50/50.
+    function validFiftyFifty() {
+      let d = request.resource.data;
+      return d.keys().hasOnly(['activityId', 'updatedAt']) && d.activityId is string && d.activityId.size() > 0
+        && d.updatedAt == request.time
+        && (resource == null || resource.data.activityId == d.activityId
+            || !existsAfter(/databases/$(database)/documents/activities/$(resource.data.activityId))
+            || getAfter(/databases/$(database)/documents/activities/$(resource.data.activityId)).data.type != 'draw');
+    }
+
     match /site/{docId} {
       allow read: if true;
-      allow create, update: if isManager() && docId == 'settings' && validSettings();
+      allow create, update: if isManager() && ((docId == 'settings' && validSettings()) || (docId == 'fiftyFifty' && validFiftyFifty()));
       allow delete: if false;
     }
 
