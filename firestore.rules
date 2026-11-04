@@ -68,7 +68,22 @@ service cloud.firestore {
         && optStr(d, 'style', 20) && optStr(d, 'graphic', 20)
         && optBool(d, 'hasManager') && optStr(d, 'manager', 60)
         && optList(d, 'winners', 50) && optList(d, 'slots', 200) && optBool(d, 'resultsFinal')
-        && d.updatedAt == request.time;
+        && d.updatedAt == request.time
+        && timesInEvent(d);
+    }
+
+    // Event hours (site settings). Once they're set, an activity's start and end must stay inside them.
+    // Saves that don't move an activity always pass, and one already outside may move toward the event
+    // but not further out. Read "after" the write, so extending the event in the same save counts.
+    function timesInEvent(d) {
+      let path = /databases/$(database)/documents/site/settings;
+      return unmoved(d) || !existsAfter(path) || !('eventStart' in getAfter(path).data) || insideOrCloser(d, getAfter(path).data);
+    }
+    function unmoved(d) { return resource != null && d.start == resource.data.start && d.length == resource.data.length; }
+    function insideOrCloser(d, ev) {
+      let end = d.start + duration.value(d.length, 'm');
+      return (d.start >= ev.eventStart || (resource != null && d.start >= resource.data.start))
+        && (end <= ev.eventEnd || (resource != null && end <= resource.data.start + duration.value(resource.data.length, 'm')));
     }
 
     match /activities/{activityId} {
@@ -80,14 +95,23 @@ service cloud.firestore {
     // The title section and menu admins edit: one public settings record.
     function validSettings() {
       let d = request.resource.data;
-      return d.keys().hasOnly(['mark', 'eyebrow', 'brand', 'tagline', 'bulbs', 'nav', 'updatedAt'])
+      return d.keys().hasOnly(['mark', 'eyebrow', 'brand', 'tagline', 'bulbs', 'nav', 'venues', 'eventStart', 'eventEnd', 'updatedAt'])
         && d.mark is string && d.mark.size() <= 24
         && d.eyebrow is string && d.eyebrow.size() <= 40
         && d.brand is string && d.brand.size() <= 24
         && d.tagline is string && d.tagline.size() <= 80
         && d.bulbs is bool
         && d.nav is list && d.nav.size() <= 12
+        && (!('venues' in d) || (d.venues is list && d.venues.size() >= 1 && d.venues.size() <= 20))
+        && validEventTimes(d)
         && d.updatedAt == request.time;
+    }
+
+    // Event start and end come as a pair; the event lasts at most 12 hours.
+    function validEventTimes(d) {
+      return (!('eventStart' in d) && !('eventEnd' in d))
+        || (d.eventStart is timestamp && d.eventEnd is timestamp && d.eventEnd > d.eventStart
+            && d.eventEnd <= d.eventStart + duration.value(12, 'h'));
     }
 
     match /site/{docId} {

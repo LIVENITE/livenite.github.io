@@ -1,0 +1,7 @@
+/* Demo mode (previews only): a pretend clock for this browser, with a banner so it's never mistaken for real time. */
+.demo-banner { position: sticky; top: 0; z-index: 6; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 6px 10px; padding: 8px 16px; background: repeating-linear-gradient(45deg, #3a2a05 0 12px, #2a1f04 12px 24px); border-bottom: 2px solid var(--bulb); color: var(--bulb); font-size: 14px; font-weight: 600; text-align: center; }
+.demo-banner b { letter-spacing: 0.12em; }
+.demo-banner a { color: var(--text); }
+.preview-tag { font: 700 11px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
+#demo-when .dtpick { max-width: 460px; }
+#demo-when .sel-box { min-height: 40px; border: 2px solid var(--line); border-radius: 10px; padding: 6px 8px; background: var(--night); color: var(--text); font: 600 15px var(--font-body); color-scheme: dark; width: 100%; box-sizing: border-box; }

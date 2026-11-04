@@ -8,7 +8,7 @@
 <title>LIVENITE</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Shrikhand&family=Righteous&family=Bowlby+One&family=Monoton&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Shrikhand&family=Righteous&family=Bowlby+One&family=Monoton&family=Bungee+Shade&family=Pacifico&family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700&display=swap">
 <link rel="stylesheet" href="assets/cards.css">
 </head>
 <body>
@@ -34,6 +34,7 @@
       <p class="eyebrow" id="eyebrow"></p>
       <h1 class="brand" id="brand"></h1>
       <p class="tagline" id="tagline"></p>
+      <p class="event-when" id="event-when" hidden></p>
       <div class="bulbs bottom" aria-hidden="true"></div>
     </div>
   </section>
@@ -80,15 +81,23 @@
     <h2 id="gm-title"></h2>
     <p class="meta" id="gm-who" style="margin:6px 0 0"></p>
   </div>
+  <section class="panel guide" id="gm-guide" hidden aria-labelledby="gm-guide-title">
+    <details open>
+      <summary><h3 id="gm-guide-title">How this draw works</h3></summary>
+      <p class="meta" id="gm-guide-intro" style="margin:8px 0 0"></p>
+      <ol class="guide-steps" id="gm-guide-steps"></ol>
+    </details>
+  </section>
   <div class="gm-grid">
-    <section class="panel" aria-labelledby="gm-time-title">
+    <section class="panel" id="gm-time-box" aria-labelledby="gm-time-title">
       <h3 id="gm-time-title">Start and end time</h3>
       <div class="facts-2">
-        <div><div class="lbl">Start</div><div class="gm-end" id="gm-start"></div></div>
+        <div><div class="lbl">Start</div><div class="gm-end" id="gm-start"></div><div class="meta" id="gm-start-was" hidden></div></div>
         <div><div class="lbl">End</div><div class="gm-end" id="gm-end"></div><div class="meta" id="gm-was" hidden></div></div>
       </div>
       <div class="meta" id="gm-left"></div>
       <div class="quick">
+        <button type="button" class="btn ghost" id="gm-start-now">Start now</button>
         <button type="button" class="btn ghost" data-adjust="-5">&minus;5 min</button>
         <button type="button" class="btn ghost" data-adjust="5">+5 min</button>
         <button type="button" class="btn ghost" data-adjust="10">+10 min</button>
@@ -96,9 +105,9 @@
       </div>
       <form class="inline-form" id="gm-set-form">
         <div class="field"><label for="gm-set">Or set the end time</label><input id="gm-set" type="time"></div>
-        <button type="submit" class="btn">Set</button>
+        <button type="submit" class="btn ghost">Set</button>
       </form>
-      <div class="status" id="gm-time-status" role="status"></div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-time-save">Save times</button><button type="button" class="btn ghost" id="gm-time-cancel">Cancel</button><span class="status" id="gm-time-status" role="status"></span></div>
     </section>
     <section class="panel" id="gm-pot-panel" hidden aria-labelledby="gm-pot-title">
       <h3 id="gm-pot-title">50/50 pot</h3>
@@ -106,30 +115,30 @@
       <form class="editor-form" id="gm-pot-form" autocomplete="off">
         <div class="field"><label for="gm-pot-amt">Pot amount ($)</label><input id="gm-pot-amt" type="text" inputmode="decimal" placeholder="1,240"></div>
         <div class="field"><label for="gm-ticket">Ticket price</label><input id="gm-ticket" maxlength="40" placeholder="e.g. $5 each or 3 for $10"></div>
-        <div class="form-actions"><button type="submit" class="btn">Update pot</button><span class="status" id="gm-pot-status" role="status"></span></div>
+        <div class="form-actions area-actions"><button type="submit" class="btn" id="gm-pot-save">Save pot</button><button type="button" class="btn ghost" id="gm-pot-cancel">Cancel</button><span class="status" id="gm-pot-status" role="status"></span></div>
       </form>
     </section>
     <section class="panel" id="gm-draws-panel" hidden aria-labelledby="gm-draws-title" style="grid-column: 1 / -1">
       <h3 id="gm-draws-title">Winning tickets</h3>
-      <label class="check"><input type="checkbox" id="gm-final"> All tickets drawn: end the draw and show SEARCH DRAW RESULTS on the card</label>
+      <label class="check"><input type="checkbox" id="gm-final"> All tickets drawn: end the draw and show SEARCH DRAW RESULTS on the card (takes effect when you press Save)</label>
       <p class="meta" id="gm-draws-count" style="margin:0"></p>
-      <p class="meta" style="margin:0;font-size:14px">Go down the list and type each winning ticket number. The label defaults to the prize number; type over it to name the prize (e.g. "Gift basket"). Tick Claimed when someone collects their prize.</p>
-      <div class="status" id="gm-draws-status" role="status"></div>
+      <p class="meta" style="margin:0;font-size:14px">Go down the list and type each winning ticket number, then press Save. The label defaults to the prize number; type over it to name the prize (e.g. "Gift basket"). Ticking Claimed saves straight away.</p>
       <ol class="slot-rows" id="gm-slots"></ol>
       <div class="mgr-tools" style="display:flex;gap:10px;flex-wrap:wrap">
         <button type="button" class="btn ghost" id="gm-add-slot">Add another prize</button>
         <button type="button" class="btn ghost" id="gm-add-5">Add 5 more</button>
       </div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-draws-save">Save ticket list</button><button type="button" class="btn ghost" id="gm-draws-cancel">Cancel</button><span class="status" id="gm-draws-status" role="status"></span></div>
     </section>
     <section class="panel" id="gm-win-panel" aria-labelledby="gm-win-title">
       <h3 id="gm-win-title">Winners</h3>
       <form class="inline-form" id="gm-win-form" autocomplete="off">
         <div class="field"><label for="gm-win-name">Winner's name</label><input id="gm-win-name" maxlength="60" placeholder="e.g. Sam K. or Table 6"></div>
         <div class="field" id="gm-ticketno-field" hidden><label for="gm-ticketno">Winning ticket number</label><input id="gm-ticketno" maxlength="12" inputmode="numeric" placeholder="e.g. 004217"></div>
-        <button type="submit" class="btn">Add winner</button>
+        <button type="submit" class="btn ghost">Add to list</button>
       </form>
       <ol class="win-list" id="gm-win-list"></ol>
-      <div class="status" id="gm-win-status" role="status"></div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-win-save">Save winners</button><button type="button" class="btn ghost" id="gm-win-cancel">Cancel</button><span class="status" id="gm-win-status" role="status"></span></div>
     </section>
   </div>
   <div id="gm-card" style="max-width:420px"></div>
@@ -141,6 +150,7 @@
   <div>
     <p class="eyebrow">Admin</p>
     <h2>Site settings</h2>
+    <a class="btn" href="#runsheet" id="rs-open" style="margin-top:12px">Open the run sheet</a>
   </div>
 
   <section class="panel login-box" id="admin-login" hidden aria-labelledby="l-title">
@@ -160,7 +170,7 @@
   <div id="admin-app" hidden style="display:contents">
   <div class="signed-in"><span>Logged in as <b id="who"></b></span><button type="button" class="btn ghost" id="logout">Log out</button><span class="status" id="a-status" role="status"></span></div>
 
-  <section class="panel" aria-labelledby="t-title">
+  <section class="panel" id="t-box" aria-labelledby="t-title">
     <h3 id="t-title">Title section</h3>
     <div class="grid2">
       <div class="field"><label for="a-eyebrow">Small line above the title</label><input id="a-eyebrow" maxlength="40"></div>
@@ -168,13 +178,23 @@
     </div>
     <div class="field"><label for="a-tagline">Tagline (leave empty to count tonight's activities)</label><input id="a-tagline" maxlength="80"></div>
     <label class="check"><input type="checkbox" id="a-bulbs"> Show the marquee light bulbs</label>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="t-save">Save</button><button type="button" class="btn ghost" id="t-cancel">Cancel</button><span class="status" id="t-status" role="status"></span></div>
   </section>
 
-  <section class="panel" aria-labelledby="n-title">
+  <section class="panel" id="n-box" aria-labelledby="n-title">
     <h3 id="n-title">Navigation bar</h3>
     <div class="field"><label for="a-mark">Logo text (top left)</label><input id="a-mark" maxlength="24"></div>
     <span class="lbl">Menu items: rename, show or hide, reorder</span>
     <ul class="nav-rows" id="a-nav"></ul>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="n-save">Save</button><button type="button" class="btn ghost" id="n-cancel">Cancel</button><span class="status" id="n-status" role="status"></span></div>
+  </section>
+
+  <section class="panel" id="v-box" aria-labelledby="v-title">
+    <h3 id="v-title">Venues</h3>
+    <span class="lbl">Where activities happen: rename, add or remove</span>
+    <ul class="nav-rows" id="a-venues"></ul>
+    <button type="button" class="btn ghost" id="a-add-venue" style="align-self:flex-start">Add venue</button>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="v-save">Save</button><button type="button" class="btn ghost" id="v-cancel">Cancel</button><span class="status" id="v-status" role="status"></span></div>
   </section>
 
   <section class="panel" aria-labelledby="acts-title">
@@ -221,6 +241,38 @@
   </div>
 </main>
 
+<!-- Run sheet: the whole night for admins (timeline on laptops, list on phones) -->
+<main class="wrap runsheet" id="view-runsheet" hidden>
+  <a class="back" href="#admin">&larr; Back to Admin</a>
+  <div>
+    <p class="eyebrow">Admin</p>
+    <h2>Run sheet</h2>
+  </div>
+  <section class="panel ev" id="ev-box" aria-labelledby="ev-title">
+    <div class="ev-head"><h3 id="ev-title">Event times</h3><span class="meta" id="ev-summary"></span></div>
+    <div class="ev-grid">
+      <div class="field">Starts<span id="ev-start"></span></div>
+      <div class="field">Ends<span id="ev-end"></span></div>
+      <div class="ev-actions"><button class="btn small" id="ev-save" type="button">Save</button><button class="btn ghost small" id="ev-cancel" type="button">Cancel</button></div>
+    </div>
+    <p class="ev-status" id="ev-status" role="status"></p>
+    <p class="meta" style="margin:0">Event duration can be up to 12 hours. Guests see: <b id="ev-guest"></b> on the home page.</p>
+  </section>
+  <div class="toolbar" id="rs-toolbar">
+    <span class="now-chip" id="rs-now"></span>
+    <button class="btn warn small" id="rs-late-btn" type="button">Running late…</button>
+    <span class="legend rs-wide"><span class="l-now">Now</span><span class="l-draft">Unsaved change</span></span>
+  </div>
+  <div class="rs-layout rs-wide">
+    <section class="panel tl" id="rs-tl-panel"><div class="tl-grid" id="rs-tl"></div><div id="rs-away"></div></section>
+    <aside class="panel side" id="rs-side"></aside>
+  </div>
+  <div class="plist rs-narrow" id="rs-list"></div>
+  <div class="save-bar" id="rs-savebar"></div>
+  <div id="rs-sheet"></div>
+  <div class="rs-toast" id="rs-toast" hidden></div>
+</main>
+
 <div class="float-pot" id="float-pot" hidden>
   <a class="fp-link" href="#a-draw" id="fp-link">
     <span class="fp-label" id="fp-label">50/50</span>
@@ -228,6 +280,11 @@
     <span class="fp-when" id="fp-when"></span>
   </a>
   <button type="button" class="fp-close" id="fp-close" aria-label="Hide the 50/50 countdown">&times;</button>
+</div>
+
+<div class="leave-bar" id="leave-bar" role="alertdialog" aria-labelledby="leave-text" hidden>
+  <p id="leave-text">You have unsaved changes. Leave without saving?</p>
+  <div><button type="button" class="btn ghost" id="leave-stay">Stay</button><button type="button" class="danger" id="leave-go" style="margin:0">Leave without saving</button></div>
 </div>
 
 <footer>

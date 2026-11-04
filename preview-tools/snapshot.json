@@ -1,0 +1,292 @@
+{
+ "takenAt": "2026-11-02 19:18 UTC",
+ "docs": {
+  "activities/05E8WIFNQItRBoL4B4bx": {
+   "winners": [
+    "Drew (ticket #679467689)"
+   ],
+   "manager": "",
+   "start": "2026-10-30T02:30:00Z",
+   "host": "The whole crowd",
+   "type": "draw",
+   "tag": "Take home Half the pot. Donating back not allowed.",
+   "hasManager": false,
+   "updatedAt": "2026-10-29T18:29:49.123Z",
+   "style": "marquee",
+   "title": "50/50",
+   "graphic": "suggest",
+   "slots": [],
+   "venue": "stage",
+   "length": 10,
+   "resultsFinal": false
+  },
+  "activities/1rZWEogZRTQubJqgORtO": {
+   "graphic": "washroom",
+   "slots": [],
+   "venue": "lobby",
+   "tag": "Located by the front entrance",
+   "host": "DJ Marla",
+   "type": "social",
+   "winners": [],
+   "manager": "",
+   "start": "2026-10-29T06:50:00Z",
+   "hasManager": false,
+   "updatedAt": "2026-11-02T15:18:07.382Z",
+   "length": 70,
+   "title": "RESTROOOMS",
+   "style": "neon",
+   "resultsFinal": false
+  },
+  "activities/MeBxoJbmr1iSLrR9Qeyd": {
+   "updatedAt": "2026-10-29T18:26:26.302Z",
+   "resultsFinal": false,
+   "venue": "deck",
+   "tag": "Beef on a bun, porchetta.",
+   "graphic": "suggest",
+   "slots": [],
+   "host": "The galley team",
+   "type": "social",
+   "style": "studio",
+   "title": "Buffet Dinner",
+   "length": 60,
+   "hasManager": false,
+   "start": "2026-10-30T02:00:00Z",
+   "manager": "",
+   "winners": []
+  },
+  "activities/QOhRZRzw8VNC7pJeXeow": {
+   "length": 180,
+   "graphic": "suggest",
+   "resultsFinal": false,
+   "venue": "lobby",
+   "slots": [
+    {
+     "label": "Grand prize: weekend getaway",
+     "ticket": "004217",
+     "claimed": true
+    },
+    {
+     "label": "Gift basket",
+     "ticket": "001388",
+     "claimed": false
+    },
+    {
+     "label": "Bar tab $50",
+     "ticket": "003902",
+     "claimed": true
+    },
+    {
+     "label": "",
+     "ticket": "000417",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "002561",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "004090",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "001744",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "003318",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "000925",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "002208",
+     "claimed": false
+    }
+   ],
+   "style": "bloom",
+   "title": "Penny Raffle",
+   "manager": "Sam",
+   "winners": [],
+   "updatedAt": "2026-10-29T17:13:21.576Z",
+   "schedLength": 180,
+   "host": "Sam",
+   "type": "tickets",
+   "start": "2026-10-29T23:00:00Z",
+   "tag": "Dozens of prizes. Green ticket sheets. Keep your stubs!",
+   "hasManager": true
+  },
+  "activities/RT7OR7K0nkOCdFrrgj8l": {
+   "slots": [],
+   "venue": "lounge",
+   "hasManager": true,
+   "graphic": "trophy",
+   "host": "Quizmaster Jo",
+   "type": "game",
+   "start": "2026-10-29T04:55:00Z",
+   "length": 60,
+   "resultsFinal": false,
+   "winners": [],
+   "manager": "SOMEONE",
+   "tag": "WIN THE BOARDS!",
+   "updatedAt": "2026-11-02T15:23:46.402Z",
+   "style": "studio",
+   "title": "CORNHOLE"
+  },
+  "activities/VxHbPRj4iLM37avfm7Zc": {
+   "graphic": "suggest",
+   "host": "",
+   "type": "tickets",
+   "venue": "lobby",
+   "slots": [
+    {
+     "label": "Signed guitar",
+     "ticket": "",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "",
+     "claimed": false
+    },
+    {
+     "label": "",
+     "ticket": "",
+     "claimed": false
+    }
+   ],
+   "resultsFinal": false,
+   "length": 15,
+   "manager": "Sam",
+   "winners": [],
+   "updatedAt": "2026-10-29T18:31:22.335Z",
+   "start": "2026-10-30T02:10:00Z",
+   "hasManager": true,
+   "tag": "Five prizes - 55\" TV, Robot Vacuum, 48\" Blackstone",
+   "title": "Door Prize",
+   "style": "sunset"
+  },
+  "activities/a4GoYqZ75BN9fHN0nOx9": {
+   "resultsFinal": false,
+   "title": "PLINKO",
+   "style": "marquee",
+   "length": 60,
+   "start": "2026-10-30T00:30:00Z",
+   "updatedAt": "2026-11-02T15:25:30.335Z",
+   "manager": "DJ Marla",
+   "winners": [
+    "Priya S.",
+    "Tom R. (blackout)"
+   ],
+   "type": "game",
+   "host": "DJ Marla",
+   "tag": "Chance to win cordless vacuum!",
+   "slots": [],
+   "venue": "stage",
+   "hasManager": true,
+   "graphic": "halftone"
+  },
+  "activities/drxxBzS0kjLmXQdBMuQp": {
+   "style": "wave",
+   "title": "Check-in & Welcome",
+   "tag": "Door prize registration, raffle packages, drink tickets. Mix and mingle.",
+   "start": "2026-10-29T23:00:00Z",
+   "winners": [],
+   "manager": "",
+   "hasManager": false,
+   "updatedAt": "2026-11-02T15:24:50.370Z",
+   "length": 120,
+   "resultsFinal": false,
+   "slots": [],
+   "graphic": "sunburst",
+   "venue": "lobby",
+   "host": "Bridal Party",
+   "type": "social"
+  },
+  "activities/g63XMZHZTiRfTn2ISsrb": {
+   "graphic": "dumbbell",
+   "venue": "lounge",
+   "resultsFinal": false,
+   "slots": [],
+   "length": 60,
+   "manager": "",
+   "winners": [],
+   "type": "challenge",
+   "updatedAt": "2026-11-02T15:21:20.684Z",
+   "host": "Priya & the house band",
+   "start": "2026-10-29T05:50:00Z",
+   "hasManager": false,
+   "tag": "ARE YOU STRONG OR ARE YOU LUCKY?",
+   "title": "STRONG MAN/WOMAN",
+   "style": "sunset"
+  },
+  "site/settings": {
+   "brand": "Marissa & Dan",
+   "tagline": "Stag & Doe  -  7:30 PM to 2:00 AM",
+   "eyebrow": "DEMO ** February 16, 1972. ** DEMO",
+   "mark": "Marissa & Dan",
+   "updatedAt": "2026-11-02T15:21:40.506Z",
+   "bulbs": true,
+   "nav": [
+    {
+     "id": "home",
+     "label": "Tonight",
+     "href": "#",
+     "show": true
+    },
+    {
+     "id": "programme",
+     "label": "Line-up",
+     "href": "#programme",
+     "show": false
+    },
+    {
+     "id": "draw",
+     "label": "50/50",
+     "href": "",
+     "show": true
+    },
+    {
+     "id": "tickets",
+     "label": "Each Draws",
+     "href": "",
+     "show": true,
+     "auto": true
+    },
+    {
+     "id": "venues",
+     "label": "Venues",
+     "href": "#programme",
+     "show": false
+    }
+   ]
+  },
+  "games/5050": {
+   "ticketPrice": "5 for 20",
+   "drawTime": "930pm",
+   "updatedAt": "2026-10-29T21:39:12.638Z",
+   "amount": 1225
+  }
+ },
+ "timeFields": [
+  "start",
+  "updatedAt"
+ ]
+}
