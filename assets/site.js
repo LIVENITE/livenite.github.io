@@ -135,6 +135,7 @@ function toActivity(snap) {
     start: toMillis(d.start),
     len: d.length || 30,
     schedLen: d.schedLength || null,
+    schedStart: toMillis(d.schedStart) || null,
     host: d.host || "",
     style: d.style || "marquee",
     graphic: d.graphic || "suggest",
@@ -156,6 +157,18 @@ function toDoc(a) {
   };
   if (a.schedLen) d.schedLength = a.schedLen;
   return d;
+}
+// The original planned slot, remembered the first time times change on a game screen or the run sheet
+// (LOGIC-RULES TIME-4). Returns the fields to add to that save; empty if it's already remembered.
+function rememberSchedule(a) {
+  if (a.schedStart || a.schedLen) return {};
+  return { schedStart: Timestamp.fromMillis(startOf(a)), schedLength: a.len };
+}
+// The original slot if one is remembered, else null.
+function scheduleOf(a) {
+  if (!a.schedStart && !a.schedLen) return null;
+  var s = a.schedStart || startOf(a);
+  return { s: s, e: s + (a.schedLen || a.len) * MIN };
 }
 function errText(err) { return (err && err.code) || "error"; }
 function note(text) { $("conn-note").textContent = text; $("conn-note").hidden = !text; }
@@ -704,7 +717,7 @@ $("m-form").addEventListener("submit", function (e) {
     // A new start or length is a new schedule, so any "moved on the night" note goes.
     if (v.start !== editorBase.start) fields.start = Timestamp.fromMillis(v.start);
     if (v.len !== editorBase.len) fields.length = v.len;
-    if (fields.start || fields.length) fields.schedLength = deleteField();
+    if (fields.start || fields.length) { fields.schedLength = deleteField(); fields.schedStart = deleteField(); }
     // Turning an activity into a Draws gives it a numbered prize list if it has none.
     if (fields.type === "tickets" && !(byId(editing.id) || editing).slots.length) fields.slots = newSlots(10);
     if (!Object.keys(fields).length) { setStatus("m-status", "No changes to save."); return; }
@@ -822,7 +835,8 @@ var timeArea = editArea({
     var a = gmGame(), d = timeDraft, f = { updatedAt: serverTimestamp() };
     // Only what changed is saved (rule 5). The first change on the night keeps the original length as the schedule.
     if (d.start !== startOf(a)) f.start = Timestamp.fromMillis(d.start);
-    if (d.len !== a.len) { f.length = d.len; f.schedLength = a.schedLen || a.len; }
+    if (d.len !== a.len) f.length = d.len;
+    Object.assign(f, rememberSchedule(a));
     timeArea.savedText = "Saved. It now runs " + clock(d.start) + " – " + clock(d.start + d.len * MIN) + " everywhere.";
     return updateDoc(actRef(a), f);
   }
@@ -833,10 +847,10 @@ function renderTime(a) {
   $("gm-end").textContent = clock(end);
   $("gm-start-was").hidden = start === startOf(a);
   $("gm-start-was").textContent = "Saved: " + clock(startOf(a));
-  // Show the saved end next to a changed one, and the original schedule if it was moved on the night.
-  var schedEnd = startOf(a) + (a.schedLen || a.len) * MIN, was = [];
+  // Show the saved end next to a changed one, and the original slot if times were moved on the night.
+  var sch = scheduleOf(a), was = [];
   if (end !== endOf(a)) was.push("Saved: " + clock(endOf(a)));
-  if (a.schedLen && a.schedLen !== len && start === startOf(a)) was.push("Scheduled: " + clock(schedEnd));
+  if (sch && (sch.s !== start || sch.e !== end)) was.push("Scheduled: " + clock(sch.s) + " – " + clock(sch.e));
   $("gm-was").hidden = !was.length; $("gm-was").textContent = was.join(" · ");
   var left = endOf(a) - now;
   $("gm-left").textContent = now < startOf(a) ? "Starts in " + words(startOf(a) - now) + "." : left > 0 ? words(left) + " to go" : "Finished";
@@ -988,7 +1002,7 @@ var slotsArea = editArea({
         var slots = d.rows.map(function (r) { return { label: r.label.slice(0, 60), ticket: r.ticket.trim().slice(0, 12), name: (r.name || "").trim().slice(0, 60), claimed: r.orig != null && latest[r.orig] ? !!latest[r.orig].claimed : false }; });
         var f = { slots: slots, resultsFinal: d.final, updatedAt: serverTimestamp() };
         // Marking all tickets drawn mid-draw ends the draw, so the card switches to SEARCH DRAW RESULTS.
-        if (endNow) { f.schedLength = a.schedLen || a.len; f.length = Math.max(1, Math.floor((Date.now() - startOf(a)) / MIN)); }
+        if (endNow) { Object.assign(f, rememberSchedule(a)); f.length = Math.max(1, Math.floor((Date.now() - startOf(a)) / MIN)); }
         t.update(ref, f);
       });
     });
@@ -1172,7 +1186,8 @@ function rsNow() { return toM(Date.now()); }
 function rsEv() { var w = eventWin(); return w ? { s: toM(w.s), e: toM(w.e) } : null; }
 function rsActs() {
   return acts.filter(function (a) { return a.start; }).map(function (a) {
-    return { id: a.id, t: a.title, v: a.venue, s: toM(a.start), e: toM(endOf(a)), style: a.style, type: TYPES[a.type] };
+    var sch = scheduleOf(a);
+    return { id: a.id, t: a.title, v: a.venue, s: toM(a.start), e: toM(endOf(a)), style: a.style, type: TYPES[a.type], sched: sch ? { s: toM(sch.s), e: toM(sch.e) } : null };
   });
 }
 function rsVName(id) { return VENUES[id] || id; }
@@ -1469,7 +1484,10 @@ function renderRsSide(list) {
   var st = rsState(a);
   var info = el("p", "meta", rsVName(rsCur(a).v) + " · " + a.type + " · " + rsDayName(rsCur(a).s) + " · " + (st === "live" ? "LIVE now" : st === "done" ? "Finished" : "Coming up"));
   info.style.margin = "0";
-  side.append(el("p", "eyebrow", "Editing"), el("h3", null, a.t), info, rsControls(a, list), el("p", "meta", "Moving the start keeps the length the same. Use Running late to move several at once."));
+  var schedNote = a.sched && (a.sched.s !== rsCur(a).s || a.sched.e !== rsCur(a).e) ? el("p", "meta sched-note", "Originally scheduled " + hmShort(a.sched.s) + " – " + hmShort(a.sched.e)) : null;
+  side.append(el("p", "eyebrow", "Editing"), el("h3", null, a.t), info);
+  if (schedNote) side.append(schedNote);
+  side.append(rsControls(a, list), el("p", "meta", "Moving the start keeps the length the same. Use Running late to move several at once."));
 }
 // ---- Phone list ----
 function renderRsPhone(list) {
@@ -1485,6 +1503,7 @@ function renderRsPhone(list) {
     it.append(sw, head, tag);
     if (ev && rsOutside(c)) it.append(el("span", "out", "⏰ " + rsOutsideText(c)));
     if (over.length) it.append(el("span", "wn", "⚠ Overlaps " + over.map(function (b) { return b.t; }).join(", ") + " (same venue)"));
+    if (a.sched && (a.sched.s !== c.s || a.sched.e !== c.e)) it.append(el("span", "sch", "Originally " + hmShort(a.sched.s) + " – " + hmShort(a.sched.e)));
     if (rsChanged(a) && !open) it.append(el("span", "mv", "Changed from " + hmShort(a.s) + " – " + hmShort(a.e) + (c.v !== a.v ? " at " + rsVName(a.v) : "") + " (unsaved)"));
     if (open) { var ed = el("div", "edit"); ed.append(rsControls(a, list)); it.append(ed); }
     return it;
@@ -1521,6 +1540,7 @@ function rsSaveAll(list, newEv) {
     var d = RS.drafts[a.id], f = { updatedAt: serverTimestamp() };
     if (d.s !== a.s) f.start = Timestamp.fromMillis(toMs(d.s));
     if (d.e - d.s !== a.e - a.s) f.length = d.e - d.s;
+    if (f.start || f.length) Object.assign(f, rememberSchedule(byId(a.id)));
     if (d.v !== a.v) f.venue = d.v;
     batch.update(doc(db, "activities", a.id), f);
   });

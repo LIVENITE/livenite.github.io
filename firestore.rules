@@ -55,7 +55,7 @@ service cloud.firestore {
     function validActivity() {
       let d = request.resource.data;
       return d.keys().hasOnly(['title', 'type', 'venue', 'start', 'length', 'blurb', 'tag', 'host', 'style', 'graphic',
-                               'hasManager', 'manager', 'winners', 'slots', 'resultsFinal', 'schedLength', 'updatedAt'])
+                               'hasManager', 'manager', 'winners', 'slots', 'resultsFinal', 'schedLength', 'schedStart', 'updatedAt'])
         && d.keys().hasAll(['title', 'type', 'venue', 'start', 'length', 'host', 'updatedAt'])
         && d.title is string && d.title.size() > 0 && d.title.size() <= 60
         && d.type in ['game', 'music', 'social', 'challenge', 'draw', 'tickets']
@@ -63,6 +63,7 @@ service cloud.firestore {
         && d.start is timestamp
         && d.length is int && d.length >= 1 && d.length <= 720
         && (!('schedLength' in d) || (d.schedLength is int && d.schedLength >= 1 && d.schedLength <= 720))
+        && (!('schedStart' in d) || d.schedStart is timestamp)
         && d.host is string && d.host.size() <= 60
         && optStr(d, 'blurb', 200) && optStr(d, 'tag', 80)
         && optStr(d, 'style', 20) && optStr(d, 'graphic', 20)

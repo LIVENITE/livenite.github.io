@@ -56,6 +56,13 @@ Dates before November 2 are approximate: those decisions were made in conversati
 **Activities can be up to 12 hours long everywhere** (Nov 4, 2026)
 - The activity editor used to stop at 6 hours, while game screens and the run sheet allowed 12. They now all allow 12, matching the longest possible event. The editor still asks for at least 5 minutes.
 
+**The original schedule is remembered when times change on the night** (Nov 4, 2026)
+- When an activity's times are first changed on a game screen or the run sheet (for example, a Running-late push), the site remembers the original planned start and length. It shows them as "Scheduled: …" on the game screen and "Originally scheduled …" on the run sheet, so it's clear how late things are running.
+- Changing times in the activity editor counts as re-planning, so it clears the remembered slot.
+
+**Stranding check stays page-only for now** (Nov 4, 2026)
+- The database can't check that shortened event times don't leave activities outside, because its rules look at one record at a time. A server-side check is on the to-do list for when the site moves to the Blaze plan.
+
 **Only one 50/50, enforced by the database too** (Nov 4, 2026)
 - Previously only the page stopped a second 50/50, so two admins saving at the same instant could both succeed. Now the database keeps one "50/50 slot" record naming the 50/50, and making an activity the 50/50 must claim it in the same save. Only one claim can win.
 

@@ -32,6 +32,9 @@ await p.locator("#rs-side button", { hasText: "Add to changes" }).click();
 ck((await t("#rs-savebar")).includes("Can't save"), "Save all refused past the end: " + (await t("#rs-savebar")).slice(0, 80));
 await p.locator("#rs-savebar button", { hasText: "& save all" }).click(); await p.waitForTimeout(300);
 ck((await t("#ev-summary")).includes("2:30 AM") && (await t("#rs-savebar")).includes("No unsaved"), "extended to 2:30 AM and saved together: " + await t("#ev-summary"));
+// TIME-4: pushed activities remember where they were originally scheduled.
+await p.locator("#rs-tl .bar", { hasText: "Buffet" }).click();
+ck((await p.textContent("#rs-side")).includes("Originally scheduled 10:00 – 11:00"), "a pushed activity shows its original slot");
 // Venue change through the run sheet shows on the guest card.
 await p.locator("#rs-tl .bar", { hasText: "PLINKO" }).click();
 await p.selectOption("#rs-side select[aria-label=Venue]", "lounge");

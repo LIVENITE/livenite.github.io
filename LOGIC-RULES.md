@@ -42,12 +42,13 @@ Start is inclusive and end is exclusive.
 - Game screens, the run sheet and the database minimum: 1 minute (so "End now" can end something a minute after it started).
 *Code:* `m-form` submit, `moveEnd()`, `validActivity()`. *Check:* `database-rules`.
 
-**TIME-4. Moved-on-the-night record (`schedLength`).**
-- On a game screen, the first save that changes the length records the previous length as `schedLength`. The game screen then shows "Scheduled: [original end]".
-- Saving a new start or length in the activity editor deletes `schedLength`, because a new schedule replaces the old one.
-- Run sheet saves don't touch it. See Open question Q2.
+**TIME-4. Original schedule (`schedStart`, `schedLength`).**
+- **Remembered:** the first save that changes an activity's start or length, from a **game screen** (GAME-4), the **run sheet** (RS-7) or "All tickets drawn" (DRAW-7), stores its original start as `schedStart` and its original length as `schedLength`. Later changes leave them alone, so they always hold the first planned slot.
+- **Shown:** game screens show "Scheduled: [start] – [end]" and the run sheet shows "Originally scheduled [start] – [end]" whenever the current times differ from the remembered slot.
+- **Cleared:** saving a new start or length in the **activity editor** deletes both, because editing there is re-planning.
+- **Older records:** some have only `schedLength`, saved before `schedStart` existed. For those, the original start is taken to be the current start.
 
-*Code:* `timeArea.save`, `m-form` submit, `rsSaveAll()`.
+*Code:* `rememberSchedule()`, `scheduleOf()`, `timeArea.save`, `slotsArea.save`, `rsSaveAll()`, `m-form` submit. *Check:* `preview-startnow` (shown, then cleared by the editor), `preview-run-sheet` (remembered after a push), `database-rules` (field checks).
 
 **TIME-5. Re-evaluation.** Every second the page checks whether any activity's state has changed (TIME-1). If one has, it redraws every screen. Countdowns update every second.
 *Code:* `tick()`, `sig()`.
@@ -191,7 +192,7 @@ See Known limit L1.
 *Code:* `drawnCount()`.
 
 **DRAW-7. All tickets drawn.**
-- Saving `resultsFinal = true` while the draw is `live` also ends it: `length = max(1, floor((now − start) / 1 min))`, with `schedLength` recorded per TIME-4.
+- Saving `resultsFinal = true` while the draw is `live` also ends it: `length = max(1, floor((now − start) / 1 min))`, with the original slot remembered per TIME-4.
 - Unticking and saving sets `resultsFinal = false` but doesn't restart the draw.
 
 *Code:* `slotsArea.save`. *Check:* none yet (an earlier mockup was tested, but that test wasn't carried over).
@@ -267,7 +268,7 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 *Code:* `moveEnd()`, `setTimes()`, `gm-set-form`.
 
 **GAME-4. Save times.**
-- Saves only what changed: `start`, and `length` plus `schedLength` per TIME-4.
+- Saves only what changed (`start` and/or `length`), plus the original slot the first time (TIME-4).
 - Refused if the result breaks EVT-3.
 
 *Code:* `timeArea`. *Check:* `preview-startnow`.
@@ -362,7 +363,7 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 *Code:* `rsViolations()`, `renderRsSaveBar()`. *Check:* `preview-run-sheet`, `emu-run-sheet`.
 
 **RS-7. Save all.** One batch:
-- for each changed activity, only the changed fields of `start`, `length` and `venue`;
+- for each changed activity, only the changed fields of `start`, `length` and `venue`, plus the original slot the first time its times change (TIME-4);
 - plus the new event times when extending.
 
 The database checks EVT-3 against the event times after the save.
@@ -395,7 +396,7 @@ The database checks EVT-3 against the event times after the save.
 **ACC-1. Guests** can read activities, site settings and the 50/50 pot, without logging in.
 **ACC-2. Admins** are logged-in users with a document at `managers/{uid}`. Only admins can create, update or delete activities, save site settings, save the pot, and read pot history. No one can add themselves to the admin list from a page.
 **ACC-3. Field checks.** The database checks every saved activity's fields (types, sizes, allowed fields) whatever the page sends, and requires `updatedAt` to be the server's time.
-*Code:* `firestore.rules`. *Check:* `database-rules` (78 checks).
+*Code:* `firestore.rules`. *Check:* `database-rules` (80 checks).
 
 **ACC-4. Game managers** (planned): see TODO.md.
 
@@ -416,8 +417,7 @@ The database checks EVT-3 against the event times after the save.
 
 ## Open questions
 
-- **Q2. `schedLength` is inconsistent.** Game screens record the original length, the editor clears it, and the run sheet leaves it alone. Should run sheet moves record "Scheduled" too?
-- **Q4. No-stranding is page-only.** The database can't check EVT-6. A buggy or out-of-date page could shrink the event around activities.
+- **Q4. No-stranding is page-only.** The database can't check EVT-6, because its rules look at one record at a time and can't scan all activities. A buggy or out-of-date page could shrink the event around activities; they'd then show as outside event hours. **Decision (2026-11-04):** keep the page check for now. Add a server-side check (a Firebase Cloud Function, which needs the Blaze plan) later. See TODO.md.
 - **Q5. Winners' names on Draws are public.** Still undecided (see TODO.md).
 
 ## Known limits
@@ -428,9 +428,11 @@ The database checks EVT-3 against the event times after the save.
 
 - **Q1 (2026-11-04).** Length limits differed (editor 5–360 minutes, elsewhere 1–720). Resolved: the editor now allows up to 720 minutes too. See TIME-3.
 - **Q3 (2026-11-04).** One 50/50 wasn't enforced by the database. Resolved: the database now requires claiming `site/fiftyFifty`. See TYPE-1.
+- **Q2 (2026-11-04).** The original schedule was handled inconsistently. Resolved: game screens and the run sheet both remember the original start and length; the editor clears them as a re-plan. See TIME-4.
 - **Q6 (2026-11-04).** Tests weren't in the repository. Resolved: they're in `tests/`, with `tests/run.sh` and `tests/README.md`.
 
 ## Change history
 
 - **2026-11-04:** First version, written from the code on the `design` branch (commit `373b5d3`).
 - **2026-11-04:** TIME-3 (editor allows 720 minutes), TYPE-1 (one 50/50 enforced by the database), ACC-3 (78 checks). Tests moved into `tests/`, and every *Check* now names a test there. Q1, Q3 and Q6 resolved.
+- **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.
