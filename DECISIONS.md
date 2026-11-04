@@ -151,5 +151,10 @@ Dates before November 2 are approximate: those decisions were made in conversati
 **Data rules first** (Nov 2, 2026)
 - DATA-RULES.md covers how every screen edits, saves and deletes data. Every change is checked against it, and against its test checklist, before it ships.
 
+**LOGIC-RULES.md is a living technical reference** (Nov 4, 2026)
+- It describes exactly how the site behaves, as rules with permanent IDs (for example `CARD-1`, `EVT-3`). Each rule names the code that does it and the test that checks it.
+- It's updated in the same change as any behaviour change (DATA-RULES.md, checklist item 10), with a dated change history. Disagreements between code and decisions go to its Open questions, never silently resolved.
+- A plain-language version for event helpers comes later, once the design settles.
+
 **Nothing goes live without asking first** (ongoing)
 - Changes are made and tested in the design preview first. Publishing to the live site, or changing the live database rules, happens only after an explicit go-ahead.
