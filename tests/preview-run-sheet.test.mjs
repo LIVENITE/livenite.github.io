@@ -12,12 +12,13 @@ ck(await p.isVisible("#rs-open"), "Admin has an Open the run sheet button");
 await p.click("#rs-open"); await p.waitForTimeout(500);
 ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "", "run sheet opens; event times not set yet");
 ck((await t("#ev-status")).startsWith("Not set yet"), "asks for event times");
-ck(await p.locator("#rs-tl .bar").count() >= 9, "all 9 activities on the timeline before event times exist: " + await p.locator("#rs-tl .bar").count());
+ck(await p.isVisible("#rs-empty") && !(await p.isVisible("#rs-tl-panel")) && !(await p.isVisible("#rs-toolbar")) && !(await p.isVisible("#rs-savebar")), "run sheet is blank until event times are set");
 // Set event times 7:30 PM Oct 29 → 2:00 AM Oct 30.
 await pick(p, "#ev-start .dtpick", "2026-10-29", 7, 30, "PM"); await pick(p, "#ev-end .dtpick", "2026-10-30", 2, 0, "AM");
 await p.click("#ev-save"); await p.waitForTimeout(300);
 ck((await t("#ev-summary")).includes("7:30 PM") && (await t("#ev-summary")).includes("6 h 30 min"), "event times saved: " + await t("#ev-summary"));
 ck(await p.locator("#rs-away .oi").count() === 3, "3 activities listed outside event hours");
+ck(!(await p.isVisible("#rs-empty")) && await p.isVisible("#rs-tl-panel"), "the run sheet appears once event times are saved");
 // Guest home page shows them.
 await p.goto(f + "#"); await p.waitForTimeout(300);
 ck((await t("#event-when")).includes("7:30 PM – 2:00 AM"), "home shows event times: " + await t("#event-when"));
@@ -57,7 +58,10 @@ await p.click("#m-cancel");
 const q = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, timezoneId: "America/Toronto" })).newPage(); q.on("pageerror", (e) => errs.push(e.message));
 await q.clock.install({ time: new Date("2026-10-29T21:20:00-04:00") });
 await q.goto(f + "#runsheet", { waitUntil: "load" }); await q.waitForTimeout(800);
-ck(await q.isVisible("#rs-list") && await q.locator("#rs-list .pitem").count() >= 1, "phone: run sheet list shows");
+ck(await q.isVisible("#rs-empty") && !(await q.isVisible("#rs-list")), "phone: blank until event times are set");
+await pick(q, "#ev-start .dtpick", "2026-10-29", 7, 30, "PM"); await pick(q, "#ev-end .dtpick", "2026-10-30", 2, 0, "AM");
+await q.click("#ev-save"); await q.waitForTimeout(300);
+ck(await q.isVisible("#rs-list") && await q.locator("#rs-list .pitem").count() >= 1, "phone: run sheet list shows once times are saved");
 ck(!(await q.evaluate(() => document.documentElement.scrollWidth > innerWidth)), "phone: no sideways scroll");
 await p.goto(f + "#runsheet"); await p.waitForTimeout(400); await p.evaluate(() => document.getElementById("rs-savebar").style.display = "none");
 await p.screenshot({ path: SHOTS + "/rs-design.png", fullPage: true });

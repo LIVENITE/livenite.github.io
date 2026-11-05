@@ -144,6 +144,9 @@ Dates before November 2 are approximate: those decisions were made in conversati
 **Running late pushes the rest of the night, skipping what's live or finished** (Nov 3, 2026)
 - If a push would run past the event's end, it warns but still lets you stage it (see DATA-RULES.md, rule 8). Save all then refuses, and offers "Extend event to [time] & save all", which saves both together.
 
+**The run sheet waits for event times** (Nov 5, 2026)
+- Until the event times are saved, the run sheet shows only the Event times panel and a note saying the run sheet appears once they're saved. Without them it can't show the night, shade outside hours or check moves.
+
 **Run sheet layout** (Nov 3, 2026)
 - Laptops: a timeline with a row per venue across the whole event, with a midnight marker showing the date change.
 - Phones: a list in time order (Earlier, On now, Coming up).

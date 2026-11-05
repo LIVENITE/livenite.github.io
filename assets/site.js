@@ -1612,8 +1612,15 @@ function renderRunSheet(forceEvent) {
   var list = rsActs();
   Object.keys(RS.drafts).forEach(function (id) { if (!rsByIdIn(list, id)) delete RS.drafts[id]; });
   placeRsToolbar();
+  renderEventPanel(forceEvent);
+  // Until event times are saved, the run sheet stays blank apart from the Event times panel (LOGIC-RULES EVT-2).
+  var blank = !eventWin();
+  $("rs-empty").hidden = !blank;
+  ["rs-toolbar", "rs-list", "rs-savebar"].forEach(function (id) { $(id).hidden = blank; });
+  document.querySelector("#view-runsheet .rs-layout").hidden = blank;
+  if (blank) { RS.late = null; $("rs-sheet").replaceChildren(); return; }
   $("rs-now").textContent = "● Now " + hm(rsNow());
-  renderEventPanel(forceEvent); renderTimeline(list); renderRsSide(list); renderRsPhone(list); renderRsSheet(list); renderRsSaveBar();
+  renderTimeline(list); renderRsSide(list); renderRsPhone(list); renderRsSheet(list); renderRsSaveBar();
 }
 $("rs-late-btn").addEventListener("click", function () { RS.late = { after: "now", by: 15 }; RS.selected = null; renderRunSheet(); });
 addEventListener("resize", function () { if (!$("view-runsheet").hidden) renderRunSheet(); });

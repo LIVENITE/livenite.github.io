@@ -291,8 +291,8 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 The database enforces all of this.
 *Code:* `validEventTimes()` (rules), `rsEvCheck()`. *Check:* `database-rules`, `preview-run-sheet`.
 
-**EVT-2. Unset means unconstrained.** With no event times, no activity is checked against event hours. The run sheet spans all activities and prompts for times.
-*Code:* `eventWin()`, `windowProblem()`, `renderTimeline()`.
+**EVT-2. Unset means unconstrained, and the run sheet waits.** With no event times, no activity is checked against event hours. The run sheet shows only the Event times panel and the note "The run sheet appears here once the event times above are saved". The timeline, list, Running late and Save all are hidden until times are saved.
+*Code:* `eventWin()`, `windowProblem()`, `renderRunSheet()`. *Check:* `preview-run-sheet` (blank before, shown after, on laptop and phone).
 
 **EVT-3. The window rule.** With old times `(s₀, e₀)` and new times `(s, e)`, a change is allowed when both:
 - `s ≥ eventStart` **or** `s ≥ s₀`;
@@ -435,4 +435,5 @@ The database checks EVT-3 against the event times after the save.
 
 - **2026-11-04:** First version, written from the code on the `design` branch (commit `373b5d3`).
 - **2026-11-04:** TIME-3 (editor allows 720 minutes), TYPE-1 (one 50/50 enforced by the database), ACC-3 (78 checks). Tests moved into `tests/`, and every *Check* now names a test there. Q1, Q3 and Q6 resolved.
+- **2026-11-05:** EVT-2: the run sheet stays blank until event times are saved (it used to show every activity).
 - **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.

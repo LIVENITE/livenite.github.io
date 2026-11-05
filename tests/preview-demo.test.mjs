@@ -18,6 +18,12 @@ ck((await state("Penny Raffle")) === "DRAWING NOW", "Penny Raffle now DRAWING NO
 ck((await state("PLINKO")).startsWith("LIVE"), "PLINKO LIVE: " + await state("PLINKO"));
 ck((await state("Buffet Dinner")).startsWith("Starts in"), "Buffet counts down: " + await state("Buffet Dinner"));
 await p.goto(f + "#runsheet"); await p.waitForTimeout(400);
+// The run sheet waits for event times (EVT-2): set 7:30 PM – 2:00 AM.
+for (const [root, date, hh, mm, ap] of [["#ev-start .dtpick", "2026-10-29", "7", "30", "PM"], ["#ev-end .dtpick", "2026-10-30", "2", "0", "AM"]]) {
+  const r = p.locator(root); await r.locator("input[type=date]").fill(date); await r.locator("input[type=date]").dispatchEvent("change");
+  await r.locator("select").nth(0).selectOption(hh); await r.locator("select").nth(1).selectOption(mm); await r.locator("select").nth(2).selectOption(ap);
+}
+await p.click("#ev-save"); await p.waitForTimeout(300);
 ck((await t("#rs-now")).includes("9:2"), "run sheet now line at 9:20: " + await t("#rs-now"));
 await p.click("#rs-late-btn"); ck(!(await p.isDisabled("#rs-side button:has-text('Add to changes')")), "Running late has things to move");
 await p.locator("#rs-side button", { hasText: "Cancel" }).click();
