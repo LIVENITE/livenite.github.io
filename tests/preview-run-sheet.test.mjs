@@ -10,7 +10,7 @@ const t = (s) => p.textContent(s);
 await p.goto(f + "#admin", { waitUntil: "load" }); await p.waitForTimeout(800);
 ck(await p.isVisible("#rs-open"), "Admin has an Open the run sheet button");
 await p.click("#rs-open"); await p.waitForTimeout(500);
-ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "Not set", "run sheet opens; event times not set yet");
+ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "", "run sheet opens; event times not set yet");
 ck((await t("#ev-status")).startsWith("Not set yet"), "asks for event times");
 ck(await p.locator("#rs-tl .bar").count() >= 9, "all 9 activities on the timeline before event times exist: " + await p.locator("#rs-tl .bar").count());
 // Set event times 7:30 PM Oct 29 → 2:00 AM Oct 30.

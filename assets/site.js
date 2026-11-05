@@ -1284,7 +1284,7 @@ function renderEventPanel(force) {
   else if (!saved) { st.className = "ev-status unsaved"; st.textContent = "Not set yet. Set the event times to plan the whole night and check activities against them."; }
   else if (st.className.indexOf("ok") < 0) { st.className = "ev-status"; st.textContent = ""; }
   if (saved) { var len = saved.e - saved.s; $("ev-summary").textContent = rsDayName(saved.s) + ", " + hmU(saved.s) + " → " + rsDayName(saved.e) + ", " + hmU(saved.e) + " · " + Math.floor(len / 60) + " h" + (len % 60 ? " " + len % 60 + " min" : ""); }
-  else $("ev-summary").textContent = "Not set";
+  else $("ev-summary").textContent = "";
   $("ev-guest").textContent = saved ? fullWhen(eventWin()) : "nothing yet";
 }
 function saveEventTimes(d) {
