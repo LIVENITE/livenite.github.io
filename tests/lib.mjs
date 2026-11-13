@@ -14,8 +14,21 @@ export const PREVIEW = pathToFileURL(join(OUT, "livenite-design.html")).href;
 
 // Chromium: CHROME_PATH if set, else the copy Playwright installed.
 const CHROME = process.env.CHROME_PATH || (existsSync("/opt/pw-browsers/chromium-1243/chrome-linux64/chrome") ? "/opt/pw-browsers/chromium-1243/chrome-linux64/chrome" : undefined);
-export function launch(extraArgs = []) {
+// Animations are switched off (as in a browser without the View Transitions feature) so tests check
+// behaviour, not timing. Pass { motion: true } to keep them, as preview-run-sheet-motion does.
+export async function launch(extraArgs = [], { motion = false } = {}) {
   const args = [...extraArgs];
   if (process.env.HTTPS_PROXY) args.push("--proxy-server=" + process.env.HTTPS_PROXY, "--proxy-bypass-list=127.0.0.1;localhost");
-  return chromium.launch({ executablePath: CHROME, args });
+  const browser = await chromium.launch({ executablePath: CHROME, args });
+  if (!motion) {
+    const newContext = browser.newContext.bind(browser);
+    browser.newContext = async (opts) => {
+      const ctx = await newContext(opts);
+      await ctx.addInitScript(() => { delete Document.prototype.startViewTransition; });
+      return ctx;
+    };
+    const newPage = browser.newPage.bind(browser);
+    browser.newPage = async (opts) => (await browser.newContext(opts)).newPage();
+  }
+  return browser;
 }

@@ -448,3 +448,19 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .runsheet .sched-note { margin: 0; color: var(--muted); font-style: italic; }
 .pitem .sch { grid-column: 2 / -1; color: var(--muted); font-size: 13px; font-style: italic; }
 .rs-empty { margin: 0; padding: 28px 20px; border: 2px dashed var(--line); border-radius: 18px; text-align: center; color: var(--muted); font-size: 16px; }
+
+/* ---- Run sheet motion on taps (see rsTap in site.js) ---- */
+:root.rs-moving::view-transition-group(*),
+:root.rs-moving::view-transition-old(*),
+:root.rs-moving::view-transition-new(*) { animation-duration: var(--rs-motion, 250ms); animation-timing-function: ease-in-out; }
+.rs-flash { animation: rs-flash 1.2s ease-out; }
+@keyframes rs-flash { from { box-shadow: 0 0 0 3px var(--bulb), 0 0 24px var(--bulb); } to { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
+#rs-sheet.enter .sheet { animation: rs-sheet-up var(--rs-motion, 250ms) ease-out; }
+#rs-sheet.enter .dim { animation: rs-fade-in var(--rs-motion, 250ms) ease-out; }
+@keyframes rs-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes rs-fade-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  /* Nothing slides here: a soft fade only. */
+  :root.rs-moving::view-transition-group(*) { animation: none; }
+  #rs-sheet.enter .sheet { animation: rs-fade-in var(--rs-motion, 250ms) ease-out; }
+}

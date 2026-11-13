@@ -12,7 +12,7 @@ echo "Building the design preview…"
 python3 -I preview-tools/build.py . tests/.out/livenite-design.html >/dev/null || exit 1
 
 # 1. Design preview (in a browser; no database needed)
-for t in preview-save-rules preview-run-sheet preview-demo preview-startnow preview-wname preview-sofar preview-guide; do run "$t.test.mjs"; done
+for t in preview-save-rules preview-run-sheet preview-demo preview-startnow preview-wname preview-sofar preview-guide preview-run-sheet-motion; do run "$t.test.mjs"; done
 
 # 2. Database rules and the site against a practice database (Firebase's local emulator)
 # The exact Firebase browser files the site uses (11.0.2), cached so pages load them locally.

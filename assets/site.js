@@ -1216,7 +1216,7 @@ function rsSetDraft(a, s, e, v) {
   }
   RS.drafts[a.id] = { s: s, e: e, v: v };
   if (!rsChanged(a)) delete RS.drafts[a.id];
-  renderRunSheet();
+  rsTap([a.id]);
 }
 
 // ---- Date and time picker: a date box plus hour, minute and AM/PM dropdowns (nothing rolls over) ----
@@ -1320,10 +1320,10 @@ function renderLate(box, list) {
   var sel = el("select", "sel-box"); sel.append(new Option("Now (" + hm(rsNow()) + ")", "now"));
   list.filter(function (a) { return rsState(a) === "next" && rsInWindow(rsCur(a)); }).sort(function (p, q) { return rsCur(p).s - rsCur(q).s; })
     .forEach(function (a) { sel.append(new Option(a.t + " (" + hmShort(rsCur(a).s) + ") and after", a.id)); });
-  sel.value = RS.late.after; sel.addEventListener("change", function () { RS.late.after = sel.value; renderRunSheet(); });
+  sel.value = RS.late.after; sel.addEventListener("change", function () { RS.late.after = sel.value; rsTap(); });
   f1.append(sel); box.append(f1);
   var f2 = el("div", "field", "By"), seg = el("div", "seg");
-  [5, 10, 15, 30, 60].forEach(function (n) { var b = el("span", RS.late.by === n ? "on" : "", n + (n === 60 ? " min" : "")); b.addEventListener("click", function () { RS.late.by = n; renderRunSheet(); }); seg.append(b); });
+  [5, 10, 15, 30, 60].forEach(function (n) { var b = el("span", RS.late.by === n ? "on" : "", n + (n === 60 ? " min" : "")); b.addEventListener("click", function () { RS.late.by = n; rsTap(); }); seg.append(b); });
   f2.append(seg); box.append(f2);
   box.append(el("span", "rs-h moving", moves.length + " WILL MOVE"));
   var ul = el("ul", "late-list");
@@ -1337,7 +1337,7 @@ function renderLate(box, list) {
     var need = Math.ceil(Math.max.apply(null, past.map(function (a) { return rsCur(a).e + RS.late.by; })) / 15) * 15;
     var x = el("button", "btn small", "Extend the event to " + hmU(need)); x.type = "button"; x.style.marginTop = "8px";
     if (need - rsEvNow().s > EVENT_MAX_MIN) { x.disabled = true; w.append(el("div", null, "Extending to " + hmU(need) + " would make the event longer than 12 hours.")); }
-    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all, or press Save there."); renderRunSheet(true); });
+    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all, or press Save there."); rsTap(null, true); });
     w.append(el("br"), x); box.append(w);
   }
   box.append(el("span", "rs-h", "SKIPPED: LIVE OR FINISHED"));
@@ -1346,8 +1346,8 @@ function renderLate(box, list) {
   box.append(ul2);
   var row = el("div", "rs-row");
   var add = el("button", "btn", "Add to changes"); add.type = "button"; add.disabled = !moves.length;
-  add.addEventListener("click", function () { var by = RS.late.by; moves.forEach(function (a) { var c = rsCur(a); RS.drafts[a.id] = { s: c.s + by, e: c.e + by, v: c.v }; }); RS.late = null; rsToast(moves.length + " activities staged. Press Save all to apply."); renderRunSheet(); });
-  var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", function () { RS.late = null; renderRunSheet(); });
+  add.addEventListener("click", function () { var by = RS.late.by; moves.forEach(function (a) { var c = rsCur(a); RS.drafts[a.id] = { s: c.s + by, e: c.e + by, v: c.v }; }); RS.late = null; rsToast(moves.length + " activities staged. Press Save all to apply."); rsTap(moves.map(function (a) { return a.id; })); });
+  var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", function () { RS.late = null; rsTap(); });
   row.append(add, cancel); box.append(row, el("p", "meta", "Nothing moves for guests until you press Save all."));
 }
 
@@ -1381,7 +1381,7 @@ function rsControls(a, list) {
   settings.venues.forEach(function (v) { vs.append(new Option(v.name || "Untitled venue", v.id)); });
   if (!VENUES[c.v]) vs.append(new Option(c.v + " (removed)", c.v));
   vs.value = c.v; vs.setAttribute("aria-label", "Venue");
-  vs.addEventListener("change", function () { var k = rsCur(a); RS.drafts[a.id] = { s: k.s, e: k.e, v: vs.value }; if (!rsChanged(a)) delete RS.drafts[a.id]; renderRunSheet(); });
+  vs.addEventListener("change", function () { var k = rsCur(a); RS.drafts[a.id] = { s: k.s, e: k.e, v: vs.value }; if (!rsChanged(a)) delete RS.drafts[a.id]; rsTap([a.id]); });
   var vcell = el("span"); vcell.append(vs);
   if (c.v !== a.v) vcell.append(el("span", "was", "was " + rsVName(a.v)));
   vr.append(el("span", "lbl", "Venue"), vcell); box.append(vr);
@@ -1406,7 +1406,7 @@ function rsControls(a, list) {
   if (rsChanged(a)) {
     var u = el("div", "rs-row");
     var undo = el("button", "btn ghost small", "Undo this change"); undo.type = "button";
-    undo.addEventListener("click", function () { delete RS.drafts[a.id]; renderRunSheet(); });
+    undo.addEventListener("click", function () { delete RS.drafts[a.id]; rsTap([a.id]); });
     u.append(el("span", "unsaved", "Unsaved change"), undo); box.append(u);
   }
   return box;
@@ -1442,14 +1442,15 @@ function renderTimeline(list) {
     box.style.setProperty("--hour", (step / (t1 - t0)) * 100 + "%"); box.style.backgroundPosition = x(Math.ceil(t0 / step) * step) + "% 0";
     here.forEach(function (a) {
       var st = rsState(a), c = rsCur(a), top = 6 + a.lane * 52 + "px";
-      var b = el("div", "bar s-" + a.style + (rsOutside(c) ? " outside" : "") + (RS.selected === a.id ? " sel" : "") + (st === "done" ? " done" : ""));
+      var b = el("div", "bar s-" + a.style + (rsOutside(c) ? " outside" : "") + (RS.selected === a.id ? " sel" : "") + (st === "done" ? " done" : "") + rsFlashCls(a));
+      b.style.viewTransitionName = "rsb-" + a.id;
       var bs = Math.max(a.s, t0), be = Math.min(a.e, t1);
       if (c.v !== a.v) { bs = Math.max(c.s, t0); be = Math.min(c.e, t1); }
       b.style.left = x(bs) + "%"; b.style.width = "calc(" + Math.max(0.4, x(be) - x(bs)) + "% - 3px)"; b.style.top = top;
       var label = "<b>" + esc(a.t) + (c.v !== a.v ? " ↳" : "") + "</b><span class='tag'>" + (st === "live" ? "LIVE · " : st === "done" ? "Finished · " : "") + hmShort(c.s) + "–" + hmShort(c.e) + "</span>";
-      var pickA = function () { RS.selected = a.id; RS.late = null; renderRunSheet(); };
+      var pickA = function () { RS.selected = a.id; RS.late = null; rsTap(); };
       b.addEventListener("click", pickA);
-      if (be - bs < 40) { b.classList.add("narrow"); var sl = elh("div", "side-label", label); sl.style.left = "calc(" + x(Math.min(t1, Math.max(a.e, c.e))) + "% + 8px)"; sl.style.top = top; sl.addEventListener("click", pickA); box.append(b, sl); }
+      if (be - bs < 40) { b.classList.add("narrow"); var sl = elh("div", "side-label", label); sl.style.viewTransitionName = "rsl-" + a.id; sl.style.left = "calc(" + x(Math.min(t1, Math.max(a.e, c.e))) + "% + 8px)"; sl.style.top = top; sl.addEventListener("click", pickA); box.append(b, sl); }
       else { b.innerHTML = label; box.append(b); }
       if (rsChanged(a) && (c.s !== a.s || c.e !== a.e)) { var g = el("div", "ghost-bar"); g.style.left = x(Math.max(c.s, t0)) + "%"; g.style.width = "calc(" + (x(Math.min(c.e, t1)) - x(Math.max(c.s, t0))) + "% - 3px)"; g.style.top = top; box.append(g); }
       if (moving.indexOf(a.id) >= 0) { var mv = el("div", "moved-bar"); var ms = c.s + RS.late.by, me = Math.min(c.e + RS.late.by, t1); mv.style.left = x(ms) + "%"; mv.style.width = "calc(" + (x(me) - x(ms)) + "% - 3px)"; mv.style.top = top; box.append(mv); }
@@ -1469,8 +1470,9 @@ function renderTimeline(list) {
     var ol = el("div", "outside-list");
     ol.append(el("span", "out-flag", "⚠ OUTSIDE EVENT HOURS (" + away.length + "): guests still see these. Move them into the event or delete them."));
     away.forEach(function (a) {
-      var c = rsCur(a), it = elh("div", "oi" + (RS.selected === a.id ? " sel" : ""), "<span><b>" + esc(a.t) + "</b> · " + esc(rsVName(c.v)) + "</span><span class='meta'>" + rsDayName(c.s) + " " + hmShort(c.s) + "–" + hmShort(c.e) + "</span>");
-      it.addEventListener("click", function () { RS.selected = a.id; RS.late = null; renderRunSheet(); });
+      var c = rsCur(a), it = elh("div", "oi" + (RS.selected === a.id ? " sel" : "") + rsFlashCls(a), "<span><b>" + esc(a.t) + "</b> · " + esc(rsVName(c.v)) + "</span><span class='meta'>" + rsDayName(c.s) + " " + hmShort(c.s) + "–" + hmShort(c.e) + "</span>");
+      it.style.viewTransitionName = "rso-" + a.id;
+      it.addEventListener("click", function () { RS.selected = a.id; RS.late = null; rsTap(); });
       ol.append(it);
     });
     holder.append(ol);
@@ -1495,9 +1497,10 @@ function renderRsPhone(list) {
   var ev = rsEv(), sortedList = list.slice().sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
   function item(a) {
     var st = rsState(a), c = rsCur(a), over = rsOverlaps(a, list), open = RS.open === a.id;
-    var it = el("div", "pitem" + (open ? " open" : "") + (rsChanged(a) ? " moved" : ""));
+    var it = el("div", "pitem" + (open ? " open" : "") + (rsChanged(a) ? " moved" : "") + rsFlashCls(a));
+    it.style.viewTransitionName = "rsp-" + a.id; it.setAttribute("data-rs", a.id);
     var head = elh("div", null, "<b>" + esc(a.t) + "</b><br><span class='t'>" + hmShort(c.s) + " – " + hmShort(c.e) + "</span> <span class='v'>· " + esc(rsVName(c.v)) + "</span>");
-    var toggle = function () { RS.open = open ? null : a.id; renderRunSheet(); };
+    var toggle = function () { RS.open = open ? null : a.id; rsTap(); };
     var sw = el("span", "sw s-" + a.style), tag = el("span", "st " + (st === "live" ? "live" : ""), st === "live" ? "LIVE" : st === "done" ? "✓ Done" : a.type);
     [sw, head, tag].forEach(function (n) { n.addEventListener("click", toggle); });
     it.append(sw, head, tag);
@@ -1511,7 +1514,7 @@ function renderRsPhone(list) {
   var inEv = sortedList.filter(function (a) { return rsInWindow(rsCur(a)); }), away = sortedList.filter(function (a) { return !rsInWindow(rsCur(a)); });
   var done = inEv.filter(function (a) { return rsState(a) === "done"; }), live = inEv.filter(function (a) { return rsState(a) === "live"; }), next = inEv.filter(function (a) { return rsState(a) === "next"; });
   var eh = el("div", "group-h clickable", "Earlier · " + done.length + " finished " + (RS.showDone ? "▾" : "▸"));
-  eh.addEventListener("click", function () { RS.showDone = !RS.showDone; renderRunSheet(); });
+  eh.addEventListener("click", function () { RS.showDone = !RS.showDone; rsTap(); });
   pl.append(eh);
   if (RS.showDone) done.forEach(function (a) { pl.append(item(a)); });
   pl.append(el("div", "group-h now", "On now · " + hm(rsNow())));
@@ -1523,9 +1526,11 @@ function renderRsPhone(list) {
   if (away.length) { var oh = el("div", "group-h out-h", "⚠ Outside event hours (" + away.length + ")"); pl.append(oh); away.forEach(function (a) { pl.append(item(a)); }); }
 }
 function renderRsSheet(list) {
-  var h = $("rs-sheet"); h.replaceChildren();
+  var h = $("rs-sheet"), wasOpen = h.childElementCount > 0; h.replaceChildren();
   if (!RS.late || innerWidth > 760) return;
-  var dim = el("div", "dim"); dim.addEventListener("click", function () { RS.late = null; renderRunSheet(); });
+  // Slides up only when it first opens, not on every redraw while it's open.
+  if (!wasOpen) h.classList.add("enter"); else h.classList.remove("enter");
+  var dim = el("div", "dim"); dim.addEventListener("click", function () { RS.late = null; rsTap(); });
   var sheet = el("div", "sheet"); renderLate(sheet, list);
   h.append(dim, sheet);
 }
@@ -1586,7 +1591,7 @@ function renderRsSaveBar() {
     bar.append(save);
   }
   var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.disabled = !n;
-  cancel.addEventListener("click", function () { RS.drafts = {}; renderRunSheet(); });
+  cancel.addEventListener("click", function () { var was = Object.keys(RS.drafts); RS.drafts = {}; rsTap(was); });
   bar.append(cancel);
   bar.toggleAttribute("data-clean", !n);
 }
@@ -1621,8 +1626,35 @@ function renderRunSheet(forceEvent) {
   if (blank) { RS.late = null; $("rs-sheet").replaceChildren(); return; }
   $("rs-now").textContent = "● Now " + hm(rsNow());
   renderTimeline(list); renderRsSide(list); renderRsPhone(list); renderRsSheet(list); renderRsSaveBar();
+  RS.flash = null;
 }
-$("rs-late-btn").addEventListener("click", function () { RS.late = { after: "now", by: 15 }; RS.selected = null; renderRunSheet(); });
+
+// ---- Motion on taps ----
+// A tap on the run sheet glides to the new layout instead of jumping (the browser's View Transitions feature):
+// each activity is tagged with its id so the browser can follow it, and what just changed glows briefly.
+// Database updates, Save and window resizes still redraw instantly. Browsers without the feature change instantly.
+var rsMotion = { ms: 250 };
+function rsFlashCls(a) { return RS.flash && RS.flash.indexOf(a.id) >= 0 ? " rs-flash" : ""; }
+function rsTap(flashIds, forceEvent) {
+  RS.flash = flashIds && flashIds.length ? flashIds : null;
+  var follow = RS.flash ? RS.flash[0] : null, root = document.documentElement;
+  var draw = function () { renderRunSheet(forceEvent); if (!follow) follow = RS.open; };
+  if (!rsMotion.ms || !document.startViewTransition) { draw(); rsFollow(follow); return; }
+  root.style.setProperty("--rs-motion", rsMotion.ms + "ms");
+  root.classList.add("rs-moving");
+  var vt = document.startViewTransition(draw);
+  // A quick second tap cancels the first glide (the change itself still happens); that isn't an error.
+  vt.ready.catch(function () {});
+  vt.finished.then(function () {}, function () {}).then(function () { root.classList.remove("rs-moving"); rsFollow(follow); });
+}
+// On a phone, keep the activity being edited in view if the list re-sorted it off screen.
+function rsFollow(id) {
+  if (!id || innerWidth > 760) return;
+  var it = $("rs-list").querySelector('[data-rs="' + id + '"]'); if (!it) return;
+  var r = it.getBoundingClientRect();
+  if (r.top < 60 || r.top > innerHeight - 100) it.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "center" });
+}
+$("rs-late-btn").addEventListener("click", function () { RS.late = { after: "now", by: 15 }; RS.selected = null; rsTap(); });
 addEventListener("resize", function () { if (!$("view-runsheet").hidden) renderRunSheet(); });
 
 // ---------- Bulbs ----------

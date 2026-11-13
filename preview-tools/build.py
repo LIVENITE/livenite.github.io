@@ -39,9 +39,9 @@ html = html.replace('href="5050/tv/"', 'href="#"')
 # Preview-only add-ons (demo mode). They're attached here, at build time, so the site's own files
 # (which are what gets published to the live site) never contain them.
 extra = here.parent / "preview-only"  # the demo-mode add-on, kept out of the site files
-html = once(html, "\n})();\n</script>", "\n" + (extra / "demo.js").read_text() + "\n})();\n</script>")
+html = once(html, "\n})();\n</script>", "\n" + (extra / "demo.js").read_text() + "\n" + (extra / "motion.js").read_text() + "\n})();\n</script>")
 html = once(html, "\n</style>", "\n" + (extra / "demo.css").read_text() + "\n</style>")
-html = once(html, '  <section class="panel" id="v-box"', (extra / "demo-panel.html").read_text() + '  <section class="panel" id="v-box"')
+html = once(html, '  <section class="panel" id="v-box"', (extra / "demo-panel.html").read_text() + (extra / "motion-panel.html").read_text() + '  <section class="panel" id="v-box"')
 html = once(html, '<div class="wrap">\n  <p class="preview-note" id="conn-note"', (extra / "demo-banner.html").read_text() + '<div class="wrap">\n  <p class="preview-note" id="conn-note"')
 out.write_text(html)
 print("wrote", out, len(html), "bytes")
