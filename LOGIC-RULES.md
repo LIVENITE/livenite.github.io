@@ -325,7 +325,7 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 ## RS: run sheet (admins)
 
 **RS-1. Layout.**
-- Above 760 px wide: a timeline with one row per venue, from 30 minutes before the event start to 30 minutes after the end, shading outside event hours, a midnight marker per date change, and a now line.
+- Above 760 px wide: a timeline with one row per venue, from 30 minutes before the event start to 30 minutes after the end, shading outside event hours, a midnight marker per date change, and a now line. The Now and Midnight labels sit in a strip above the hour labels, never over the activities; when they're close, the left one's label flips leftwards so they don't overlap.
 - At 760 px or less: a list (Earlier / On now / Coming up / Outside event hours), with a date heading at each new day.
 
 *Code:* `renderTimeline()`, `renderRsPhone()`.
@@ -486,3 +486,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-05:** EVT-2: the run sheet stays blank until event times are saved (it used to show every activity).
 - **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.
 - **2026-11-14:** New MOT section (MOT-1 to MOT-7) for MOTION-RULES.md: press-in, hover, selected look, glow where you were working, slides only for one-off changes, error shake, cards glowing as they go LIVE. The game screen's time notes now keep their space so buttons don't shift between taps.
+- **2026-11-14:** RS-1: the Now and Midnight labels moved to a strip above the timeline, so they no longer cover activities.

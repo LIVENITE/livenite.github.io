@@ -357,8 +357,9 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .rs-layout { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 16px; align-items: start; }
 .runsheet .tl { padding: 14px 14px 18px; overflow: hidden; }
 .tl-grid { position: relative; display: grid; grid-template-columns: 150px 1fr; }
-.tl-grid .axis { grid-column: 2; position: relative; height: 26px; border-bottom: 1px solid var(--line); }
-.tl-grid .axis span { position: absolute; transform: translateX(-50%); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
+/* The axis has a label strip on top (Now and Midnight labels), then the hour labels, so no label sits over the activities. */
+.tl-grid .axis { grid-column: 2; position: relative; height: 46px; border-bottom: 1px solid var(--line); }
+.tl-grid .axis span { position: absolute; top: 24px; transform: translateX(-50%); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .tl-grid .row-label { grid-column: 1; padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 15px; }
 .tl-grid .row-label .warn-note { display: block; margin-top: 4px; color: var(--warn); font-weight: 600; font-size: 12px; }
 .tl-grid .row-label .none { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
@@ -374,11 +375,11 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .side-label b { font-size: 13px; }
 .ghost-bar, .moved-bar { position: absolute; height: 44px; border-radius: 10px; pointer-events: none; box-sizing: border-box; }
 .ghost-bar { border: 2px dashed var(--bulb); } .moved-bar { border: 2px dashed var(--aqua); }
-.now-line { position: absolute; top: 26px; bottom: 0; width: 2px; background: #ff6b6b; z-index: 3; }
-.now-line::before { content: attr(data-label); position: absolute; top: 2px; left: 4px; font-size: 11px; font-weight: 700; color: #ff6b6b; white-space: nowrap; background: var(--stage); padding: 1px 4px; border-radius: 4px; }
-.midnight { position: absolute; top: 26px; bottom: 0; width: 0; border-left: 2px dashed var(--muted); z-index: 2; }
-.midnight::before { content: attr(data-label); position: absolute; bottom: 2px; left: 4px; font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; background: var(--stage); padding: 1px 4px; border-radius: 4px; }
-.edge { position: absolute; top: 26px; bottom: 0; background: rgb(0 0 0 / 0.28); z-index: 1; pointer-events: none; }
+.now-line { position: absolute; top: 20px; bottom: 0; width: 2px; background: #ff6b6b; z-index: 3; }
+.now-line::before { content: attr(data-label); position: absolute; top: -20px; left: 4px; font-size: 11px; font-weight: 700; color: #ff6b6b; white-space: nowrap; background: var(--stage); padding: 1px 4px; border-radius: 4px; }
+.midnight { position: absolute; top: 20px; bottom: 0; width: 0; border-left: 2px dashed var(--muted); z-index: 2; }
+.midnight::before { content: attr(data-label); position: absolute; top: -20px; left: 4px; font-size: 11px; font-weight: 700; color: var(--muted); white-space: nowrap; background: var(--stage); padding: 1px 4px; border-radius: 4px; }
+.edge { position: absolute; top: 46px; bottom: 0; background: rgb(0 0 0 / 0.28); z-index: 1; pointer-events: none; }
 .outside-list { margin-top: 14px; border-top: 1px solid var(--line); padding-top: 12px; display: flex; flex-direction: column; gap: 8px; }
 .outside-list .oi { display: flex; justify-content: space-between; gap: 10px; padding: 8px 10px; border: 2px solid var(--onair); border-radius: 10px; cursor: pointer; }
 .outside-list .oi.sel { outline: 3px solid #fff; outline-offset: 2px; }
@@ -474,6 +475,8 @@ a.card:active { transform: scale(0.97); filter: brightness(0.9); }
 /* Rule 3: a selected item turns white, keeping a stripe of its own colour across about a third of it. */
 .runsheet .bar { --stripe: var(--card-bg); }
 .runsheet .bar.s-ticket, .runsheet .bar.s-diner, .pitem.s-ticket, .pitem.s-diner { --stripe: var(--onair); }
+/* When the Now and Midnight labels are close, one flips to the left of its line so they don't overlap. */
+.now-line.flip::before, .midnight.flip::before { left: auto; right: 4px; }
 /* Padding percentages count from the timeline row, so --bw (the block's share of the row) turns 30% of the block into row terms. */
 .runsheet .bar.sel { background: linear-gradient(to right, var(--stripe) 0 30%, #ffffff 30%); color: var(--ink); border-color: #ffffff; padding-left: calc(var(--bw, 10) * 0.3% + 6px); outline: 0; }
 .outside-list .oi.sel { background: linear-gradient(to right, var(--onair) 0 30%, #ffffff 30%); color: var(--ink); border-color: #ffffff; padding-left: calc(30% + 10px); outline: 0; }

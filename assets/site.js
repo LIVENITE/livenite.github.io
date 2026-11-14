@@ -1505,9 +1505,12 @@ function renderTimeline(list) {
     var lead = el("div", "edge"); lead.style.left = "150px"; lead.style.width = "calc((100% - 150px) * " + x(ev.s) / 100 + ")"; tl.append(lead);
     var tail = el("div", "edge"); tail.style.left = "calc(150px + (100% - 150px) * " + x(ev.e) / 100 + ")"; tail.style.right = "0"; tl.append(tail);
   }
-  for (var mid = Math.ceil((t0 + 1) / 1440) * 1440; mid < t1; mid += 1440) { var mk = el("div", "midnight"); mk.setAttribute("data-label", "Midnight · " + rsDayName(mid)); mk.style.left = "calc(150px + (100% - 150px) * " + x(mid) / 100 + ")"; tl.append(mk); }
+  for (var mid = Math.ceil((t0 + 1) / 1440) * 1440; mid < t1; mid += 1440) { var mk = el("div", "midnight"); mk.setAttribute("data-m", mid); mk.setAttribute("data-label", "Midnight · " + rsDayName(mid)); mk.style.left = "calc(150px + (100% - 150px) * " + x(mid) / 100 + ")"; tl.append(mk); }
   var now = rsNow();
-  if (now > t0 && now < t1) { var nl = el("div", "now-line"); nl.setAttribute("data-label", "NOW " + hmShort(now)); nl.style.left = "calc(150px + (100% - 150px) * " + x(now) / 100 + ")"; tl.append(nl); }
+  // Keep the Now and Midnight labels (in the strip above the timeline) apart: the one on the left flips its label leftwards.
+  tl.querySelectorAll(".midnight").forEach(function (mk) { var mid = Number(mk.getAttribute("data-m")); if (now > mid && x(now) - x(mid) < 14) mk.classList.add("flip"); });
+  var nowFlip = false; for (var mm = Math.ceil((t0 + 1) / 1440) * 1440; mm < t1; mm += 1440) if (now < mm && x(mm) - x(now) < 14) nowFlip = true;
+  if (now > t0 && now < t1) { var nl = el("div", "now-line" + (nowFlip ? " flip" : "")); nl.setAttribute("data-label", "NOW " + hmShort(now)); nl.style.left = "calc(150px + (100% - 150px) * " + x(now) / 100 + ")"; tl.append(nl); }
   // Activities entirely outside event hours, flagged below.
   var away = list.filter(function (a) { return !rsInWindow(rsCur(a)); }), holder = $("rs-away"); holder.replaceChildren();
   if (away.length) {
