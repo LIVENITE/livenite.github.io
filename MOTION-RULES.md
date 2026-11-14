@@ -60,6 +60,8 @@ Whenever a tap changes something on screen (a time, a position, a value, a list)
 
 - Only what actually changed is highlighted, not the whole screen.
 - The glow appears where you were working. Other copies of the same item on the screen update quietly, without glowing.
+- For a changed value, such as a time, the glow is on the value itself (around its text), not a ring around its whole row.
+- A dropdown or choice you just changed yourself doesn't glow: you're already looking at it.
 - The highlight never moves anything and never blocks a tap.
 - This is the one exception to the ¼-second limit in rule 8. A highlight is a fading colour, not movement, so it doesn't slow anyone down.
 
@@ -157,7 +159,7 @@ Fill this in for each project. AI assistants: ask about anything left blank befo
 | Screens covered | Every screen: guest pages (home, activity pages, ticket search) and Admin (Admin panel, activity editor, game screens, run sheet) |
 | Selection colour (rule 3) | White (#ffffff), with a stripe of the item's own card colour across about 30% of its width |
 | Stripe exceptions (rule 3) | Cream card looks (Ticket, Diner) use an orange stripe; dark card looks (Chalk and similar) use their dark background colour |
-| Highlight colour and length (rule 4) | Yellow glow (the site's bright yellow), fading over 1 second |
+| Highlight colour and length (rule 4) | Yellow glow (the site's bright yellow), fading over 1 second. Times glow on their digits; added rows (winners, prizes) and moved blocks get a ring |
 | Repeat-tap buttons (rule 5) | −5 / +5 / +10 time buttons, Running late "By" choices, ticket and winner adders |
 | Things that slide (rules 6 and 7) | Run sheet blocks and phone list items moving to a new time or venue; panels and editors opening and closing; the phone Running late panel |
 | Press-in (rule 1) | Shrink to 95%, darken to about 80%, under 0.1 second |
@@ -173,3 +175,4 @@ Fill this in for each project. AI assistants: ask about anything left blank befo
 ## Change history
 
 - *Nov 13, 2026:* first version, from questions answered and the "Motion options" mock-up.
+- *Nov 14, 2026:* rule 4: a changed value glows on its text, not its whole row; a dropdown you just changed doesn't glow.

@@ -361,7 +361,6 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .tl-grid .axis { grid-column: 2; position: relative; height: 46px; border-bottom: 1px solid var(--line); }
 .tl-grid .axis span { position: absolute; top: 24px; transform: translateX(-50%); font-size: 12px; color: var(--muted); font-weight: 600; white-space: nowrap; }
 .tl-grid .row-label { grid-column: 1; padding: 10px 10px 10px 0; border-bottom: 1px solid var(--line); font-weight: 700; font-size: 15px; }
-.tl-grid .row-label .warn-note { display: block; margin-top: 4px; color: var(--warn); font-weight: 600; font-size: 12px; }
 .tl-grid .row-label .none { display: block; color: var(--muted); font-weight: 500; font-size: 12px; }
 .lane-box { grid-column: 2; position: relative; border-bottom: 1px solid var(--line); background-image: linear-gradient(to right, rgb(43 99 106 / 0.45) 1px, transparent 1px); background-size: var(--hour) 100%; }
 .runsheet .bar { position: absolute; height: 44px; border-radius: 10px; padding: 4px 8px; background: var(--card-bg); color: var(--card-fg); border: 2px solid var(--card-edge); overflow: hidden; font-size: 12px; line-height: 1.25; cursor: pointer; box-sizing: border-box; }
@@ -397,7 +396,11 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .runsheet .warn-box { border: 2px solid var(--warn); border-radius: 12px; padding: 8px 10px; color: var(--warn); font-size: 13px; font-weight: 600; }
 .runsheet .block-box { border: 2px solid var(--onair); border-radius: 12px; padding: 8px 10px; color: var(--onair); font-size: 13px; font-weight: 600; }
 .exact { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--line); padding-top: 10px; }
-.exact .lbl { font-size: 12px; font-weight: 700; letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; }
+.exact-headrow { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.exact-head { background: none; border: 0; padding: 4px 0; font: 700 12px var(--font-body); letter-spacing: 0.12em; color: var(--muted); text-transform: uppercase; cursor: pointer; text-align: left; }
+.exact-head:hover { color: var(--text); }
+.runsheet .meta.rs-info { color: var(--text); }
+.runsheet .meta.rs-hint { margin: 0; }
 .exact-grid { display: grid; gap: 8px; }
 .exact .dtpick { grid-template-columns: 1fr; }
 .exact .tsel { max-width: 300px; }
@@ -494,6 +497,8 @@ a.card:active { transform: scale(0.97); filter: brightness(0.9); }
 .glow { animation: glow 1s ease-out; }
 @keyframes glow { from { box-shadow: 0 0 0 3px var(--bulb), 0 0 24px var(--bulb); } to { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
 .rs-controls .time-row, #gm-start, #gm-end { border-radius: 10px; }
+.glow-text { animation: glow-text 1s ease-out; }
+@keyframes glow-text { from { text-shadow: 0 0 6px var(--bulb), 0 0 18px var(--bulb), 0 0 30px var(--bulb); } to { text-shadow: 0 0 0 transparent, 0 0 0 transparent, 0 0 0 transparent; } }
 #gm-start, #gm-end { display: inline-block; padding: 0 6px; margin-left: -6px; }
 /* Game screen time notes keep their space when empty, so the buttons below never shift between taps. */
 .gm-note { min-height: 1.45em; }

@@ -17,6 +17,8 @@ function canMove() { return !reduceMotion && typeof document.startViewTransition
 function replayClass(n, cls) { if (!n) return; n.classList.remove(cls); void n.offsetWidth; n.classList.add(cls); }
 // Rule 4: what changed glows yellow for 1 second (also with reduce motion: it doesn't move anything).
 function glow(n) { replayClass(n, "glow"); }
+// For a changed value (a time), the glow is on the text itself rather than a ring around it.
+function glowText(n) { replayClass(n, "glow-text"); }
 // Rule 11: errors shake (a red flash with reduce motion) and vibrate on phones that allow it (not iPhones).
 function shake(n) { replayClass(n, reduceMotion ? "err-flash" : "shake"); try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} }
 // Rule 7: panels slide in when they open and out when they close.
@@ -877,8 +879,8 @@ var gmGlowNext = false; // set by the time buttons, so only a tap (not a databas
 function renderTime(a) {
   var now = Date.now(), start = draftStart(a), len = draftLen(a), end = start + len * MIN;
   var tapped = gmGlowNext; gmGlowNext = false;
-  if (tapped && $("gm-start").textContent !== clock(start)) glow($("gm-start"));
-  if (tapped && $("gm-end").textContent !== clock(end)) glow($("gm-end"));
+  if (tapped && $("gm-start").textContent !== clock(start)) glowText($("gm-start"));
+  if (tapped && $("gm-end").textContent !== clock(end)) glowText($("gm-end"));
   $("gm-start").textContent = clock(start);
   $("gm-end").textContent = clock(end);
   // These notes keep their space even when empty, so the buttons below never shift between taps (MOTION-RULES rule 6).
@@ -1211,7 +1213,7 @@ function elh(tag, cls, html) { var n = document.createElement(tag); if (cls) n.c
 
 // Laptop: a timeline with a row per venue across the whole event; phones: a list in time order.
 // Every change is a draft until Save all, which saves only start, length and venue for the activities changed.
-var RS = { selected: null, open: null, drafts: {}, late: null, evDraft: null, showDone: false };
+var RS = { selected: null, open: null, drafts: {}, late: null, evDraft: null, showDone: false, exactOpen: {} };
 var MIN_MS = 60000;
 function rsDay0() {
   if (RS.day0 && (Object.keys(RS.drafts).length || RS.evDraft)) return RS.day0;
@@ -1233,10 +1235,9 @@ function rsVName(id) { return VENUES[id] || id; }
 function rsCur(a) { return RS.drafts[a.id] || { s: a.s, e: a.e, v: a.v }; }
 function rsChanged(a) { var d = RS.drafts[a.id]; return !!d && (d.s !== a.s || d.e !== a.e || d.v !== a.v); }
 function rsState(a) { var n = rsNow(); return n >= a.e ? "done" : n >= a.s ? "live" : "next"; }
-function rsOverlaps(a, list) { var c = rsCur(a); return list.filter(function (b) { var o = rsCur(b); return b.id !== a.id && o.v === c.v && o.s < c.e && c.s < o.e; }); }
 function rsOutside(c, ev) { ev = ev || rsEv(); return !!ev && (c.s < ev.s || c.e > ev.e); }
 function rsInWindow(c, ev) { ev = ev || rsEv(); return !ev || (c.e > ev.s && c.s < ev.e); }
-function rsOutsideText(c) { var ev = rsEv(); return c.e <= ev.s || c.s >= ev.e ? "Outside allowed date / time" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
+function rsOutsideText(c) { var ev = rsEv(); return c.e <= ev.s || c.s >= ev.e ? "Outside event hours" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
 function hm(m) { return clock(toMs(m)); }
 function hmU(m) { return hm(m).replace("p.m.", "PM").replace("a.m.", "AM"); }
 function hmShort(m) { return hm(m).replace(/ [ap]\.m\./, ""); }
@@ -1426,30 +1427,40 @@ function rsControls(a, list) {
   var vcell = el("span"); vcell.append(vs);
   if (c.v !== a.v) vcell.append(el("span", "was", "was " + rsVName(a.v)));
   vr.append(el("span", "lbl", "Venue"), vcell); box.append(vr);
-  // Exact date and time: must land fully inside the event.
+  // Exact date and time: must land fully inside the event. The section folds; it starts open only for an activity
+  // outside event hours, where picking a time inside the event is the fix. Its open/closed state is kept per activity.
   var s0 = rsSuggestedStart(a), len = c.e - c.s, wrap = el("div", "exact");
-  wrap.append(el("span", "lbl", ev && rsOutside(c) ? "Set the date and time (suggested to fit the event)" : "Or set an exact date and time"));
-  var sp = dateTimePick(s0, "Start", function () { var ns = sp.get(); if (ns != null) ep.set(ns + len); });
-  var ep = dateTimePick(s0 + len, "End");
-  if (ev) [sp, ep].forEach(function (p) { p.limitDates(mToInput(ev.s).slice(0, 10), mToInput(ev.e).slice(0, 10)); });
-  var l1 = el("div", "field", "Starts"), l2 = el("div", "field", "Ends"); l1.append(sp); l2.append(ep);
-  var go = el("button", "btn small soft", "Use these times"); go.type = "button";
-  go.addEventListener("click", function () {
-    var ns = sp.get(), ne = ep.get();
-    if (ns == null || ne == null) { rsToast("Pick a date and time for both start and end."); return; }
-    if (ev && rsOutside({ s: ns, e: ne })) { rsToast("Blocked: pick times within the event (" + rsDayName(ev.s) + " " + hmU(ev.s) + " – " + rsDayName(ev.e) + " " + hmU(ev.e) + ")."); return; }
-    rsSetDraft(a, ns, ne, null, true);
-  });
-  var g = el("div", "exact-grid"); g.append(l1, l2); wrap.append(g, go); box.append(wrap);
-  if (ev && rsOutside(c)) box.append(el("div", "block-box", "⏰ " + rsOutsideText(c) + " (" + hmU(ev.s) + " – " + hmU(ev.e) + "). It can only be moved toward the event hours, not further out."));
-  var over = rsOverlaps(a, list);
-  if (over.length) box.append(el("div", "warn-box", "⚠ Overlaps " + over.map(function (b) { return b.t; }).join(", ") + " at " + rsVName(c.v) + ". That's fine if it's planned."));
-  if (rsChanged(a)) {
-    var u = el("div", "rs-row");
-    var undo = el("button", "btn ghost small", "Undo this change"); undo.type = "button";
-    undo.addEventListener("click", function () { var k = rsCur(a); delete RS.drafts[a.id]; rsTap({ ctl: { id: a.id, prev: k } }); });
-    u.append(el("span", "unsaved", "Unsaved change"), undo); box.append(u);
+  var open = RS.exactOpen[a.id] != null ? RS.exactOpen[a.id] : !!(ev && rsOutside(c));
+  var headRow = el("div", "exact-headrow");
+  var head = el("button", "exact-head", (open ? "▾ " : "▸ ") + (ev && rsOutside(c) ? "Set the date and time (suggested to fit the event)" : "Or set an exact date and time"));
+  head.type = "button"; head.setAttribute("aria-expanded", String(open));
+  head.addEventListener("click", function () { RS.exactOpen[a.id] = !open; rsTap({ instant: true }); });
+  headRow.append(head);
+  // "Unsaved change" sits on the heading's line, so it shows whether the section is open or folded.
+  if (rsChanged(a)) headRow.append(el("span", "unsaved", "Unsaved change"));
+  wrap.append(headRow);
+  if (open) {
+    var sp = dateTimePick(s0, "Start", function () { var ns = sp.get(); if (ns != null) ep.set(ns + len); });
+    var ep = dateTimePick(s0 + len, "End");
+    if (ev) [sp, ep].forEach(function (p) { p.limitDates(mToInput(ev.s).slice(0, 10), mToInput(ev.e).slice(0, 10)); });
+    var l1 = el("div", "field", "Starts"), l2 = el("div", "field", "Ends"); l1.append(sp); l2.append(ep);
+    var go = el("button", "btn small soft", "Apply"); go.type = "button";
+    go.addEventListener("click", function () {
+      var ns = sp.get(), ne = ep.get();
+      if (ns == null || ne == null) { rsToast("Pick a date and time for both start and end."); return; }
+      if (ev && rsOutside({ s: ns, e: ne })) { rsToast("Blocked: pick times within the event (" + rsDayName(ev.s) + " " + hmU(ev.s) + " – " + rsDayName(ev.e) + " " + hmU(ev.e) + ")."); return; }
+      rsSetDraft(a, ns, ne, null, true);
+    });
+    var acts = el("div", "rs-row"); acts.append(go);
+    if (rsChanged(a)) {
+      var undo = el("button", "btn ghost small", "Undo"); undo.type = "button";
+      undo.addEventListener("click", function () { var k = rsCur(a); delete RS.drafts[a.id]; rsTap({ ctl: { id: a.id, prev: k } }); });
+      acts.append(undo);
+    }
+    var g = el("div", "exact-grid"); g.append(l1, l2); wrap.append(g, acts);
   }
+  box.append(wrap);
+  if (ev && rsOutside(c)) box.append(el("div", "block-box", "⏰ " + rsOutsideText(c) + "."));
   return box;
 }
 
@@ -1474,10 +1485,8 @@ function renderTimeline(list) {
     var here = inEv.filter(function (a) { return rsCur(a).v === vid; }).sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
     var lanes = [];
     here.forEach(function (a) { var c = rsCur(a), i = 0; while (lanes[i] && lanes[i].some(function (b) { var o = rsCur(b); return o.s < c.e && c.s < o.e; })) i++; (lanes[i] = lanes[i] || []).push(a); a.lane = i; });
-    var nOver = here.filter(function (a) { return rsOverlaps(a, list).length; }).length;
     var lab = el("div", "row-label", rsVName(vid));
     if (!here.length) lab.append(el("span", "none", ev ? "Nothing during the event" : "Nothing scheduled"));
-    if (nOver) lab.append(el("span", "warn-note", "⚠ " + nOver + " overlapping (OK if planned)"));
     tl.append(lab);
     var box = el("div", "lane-box"); box.style.height = Math.max(1, lanes.length) * 52 + 12 + "px";
     box.style.setProperty("--hour", (step / (t1 - t0)) * 100 + "%"); box.style.backgroundPosition = x(Math.ceil(t0 / step) * step) + "% 0";
@@ -1530,21 +1539,21 @@ function renderRsSide(list) {
   var side = $("rs-side"); side.replaceChildren();
   if (RS.late) { renderLate(side, list); return; }
   var a = RS.selected && rsByIdIn(list, RS.selected);
-  if (!a) { side.append(el("p", "eyebrow", "Editing"), el("p", "meta", "Click an activity on the timeline to change its time or venue.")); return; }
+  if (!a) { side.append(el("p", "meta", "Click an activity on the timeline to change its time or venue.")); return; }
   var st = rsState(a);
-  var info = el("p", "meta", rsVName(rsCur(a).v) + " · " + a.type + " · " + rsDayName(rsCur(a).s) + " · " + (st === "live" ? "LIVE now" : st === "done" ? "Finished" : "Coming up"));
+  var info = el("p", "meta rs-info", rsVName(rsCur(a).v) + " · " + a.type + " · " + rsDayName(rsCur(a).s) + " · " + (st === "live" ? "LIVE now" : st === "done" ? "Finished" : "Coming up"));
   info.style.margin = "0";
   var schedNote = a.sched && (a.sched.s !== rsCur(a).s || a.sched.e !== rsCur(a).e) ? el("p", "meta sched-note", "Originally scheduled " + hmShort(a.sched.s) + " – " + hmShort(a.sched.e)) : null;
-  side.append(el("p", "eyebrow", "Editing"), el("h3", null, a.t), info);
+  side.append(el("h3", null, a.t), info);
   if (schedNote) side.append(schedNote);
-  side.append(rsControls(a, list), el("p", "meta", "Moving the start keeps the length the same. Use Running late to move several at once."));
+  side.append(el("p", "meta rs-hint", "Moving the start keeps the length the same. Use Running late to move several at once."), rsControls(a, list));
 }
 // ---- Phone list ----
 function renderRsPhone(list) {
   var pl = $("rs-list"); pl.replaceChildren();
   var ev = rsEv(), sortedList = list.slice().sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
   function item(a) {
-    var st = rsState(a), c = rsCur(a), over = rsOverlaps(a, list), open = RS.open === a.id;
+    var st = rsState(a), c = rsCur(a), open = RS.open === a.id;
     var it = el("div", "pitem s-" + a.style + (open ? " open" : "") + (rsChanged(a) ? " moved" : ""));
     it.style.viewTransitionName = "rsp-" + a.id; it.setAttribute("data-rs", a.id);
     var head = elh("div", null, "<b>" + esc(a.t) + "</b><br><span class='t'>" + hmShort(c.s) + " – " + hmShort(c.e) + "</span> <span class='v'>· " + esc(rsVName(c.v)) + "</span>");
@@ -1553,7 +1562,6 @@ function renderRsPhone(list) {
     var ph = el("div", "phead"); ph.append(sw, head, tag); ph.addEventListener("click", toggle);
     it.append(ph);
     if (ev && rsOutside(c)) it.append(el("span", "out", "⏰ " + rsOutsideText(c)));
-    if (over.length) it.append(el("span", "wn", "⚠ Overlaps " + over.map(function (b) { return b.t; }).join(", ") + " (same venue)"));
     if (a.sched && (a.sched.s !== c.s || a.sched.e !== c.e)) it.append(el("span", "sch", "Originally " + hmShort(a.sched.s) + " – " + hmShort(a.sched.e)));
     if (rsChanged(a) && !open) it.append(el("span", "mv", "Changed from " + hmShort(a.s) + " – " + hmShort(a.e) + (c.v !== a.v ? " at " + rsVName(a.v) : "") + " (unsaved)"));
     if (open) { var ed = el("div", "edit"); ed.append(rsControls(a, list)); it.append(ed); }
@@ -1703,8 +1711,9 @@ function rsGlow(o) {
   if (o.ctl) {
     var a = rsByIdIn(rsActs(), o.ctl.id); if (!a) return;
     var c = rsCur(a), p = o.ctl.prev;
-    [["s", c.s !== p.s], ["e", c.e !== p.e], ["v", c.v !== p.v]].forEach(function (r) {
-      if (r[1]) document.querySelectorAll('[data-ctl="' + a.id + '"] [data-row="' + r[0] + '"]').forEach(glow);
+    // The glow is on the changed time itself. A venue change doesn't glow: you're already looking at the dropdown.
+    [["s", c.s !== p.s], ["e", c.e !== p.e]].forEach(function (r) {
+      if (r[1]) document.querySelectorAll('[data-ctl="' + a.id + '"] [data-row="' + r[0] + '"] .time-big').forEach(glowText);
     });
   }
 }

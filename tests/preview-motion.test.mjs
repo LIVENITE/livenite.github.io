@@ -52,7 +52,7 @@ n0 = await vt(p);
 const plus5 = p.locator('#rs-side [data-row="s"] button', { hasText: "+5" });
 await plus5.click(); await p.waitForTimeout(80);
 ck(await vt(p) === n0, "+5 changes instantly (no slide)");
-ck(await has(p, '#rs-side [data-row="s"]', "glow") && await has(p, '#rs-side [data-row="e"]', "glow"), "the side panel's Start and End rows glow");
+ck(await has(p, '#rs-side [data-row="s"] .time-big', "glow-text") && await has(p, '#rs-side [data-row="e"] .time-big', "glow-text"), "the side panel's new Start and End times glow");
 ck(!(await has(p, bar(PLINKO), "glow")), "the timeline block doesn't glow (the glow is where you were working)");
 ck(await others() === before, "nothing else on the timeline moved or resized");
 // Quick-tap check: 5 fast taps all count (8:35 after the first, so 9:00 after 5 more).
@@ -71,7 +71,7 @@ await p.waitForTimeout(60);
 ck(await vt(p) === n0 + 1, "changing the venue slides");
 await settle(p);
 ck(Date.now() - t0 < 900, "the slide is quick (finished in " + (Date.now() - t0) + " ms, including test overhead)");
-ck(await has(p, '#rs-side [data-row="v"]', "glow"), "after sliding, the venue row glows");
+ck(!(await has(p, '#rs-side [data-row="v"]', "glow")), "a venue change doesn't glow (you're already looking at the dropdown)");
 // Running late: Add to changes slides, then the moved blocks glow.
 await p.locator("#rs-savebar button", { hasText: "Cancel" }).click(); await settle(p); await p.waitForTimeout(300);
 ck(await has(p, bar(PLINKO), "glow"), "Cancel slides back and the reverted block glows");
@@ -82,8 +82,10 @@ ck(await vt(p) === n0 + 1 && await has(p, bar("MeBxoJbmr1iSLrR9Qeyd"), "glow"), 
 await p.screenshot({ path: SHOTS + "/motion-laptop.png" });
 // Rule 11: a blocked change shakes its message.
 await p.locator(bar("MeBxoJbmr1iSLrR9Qeyd")).click();
+ck(!(await p.isVisible("#rs-side .exact-grid")) && (await p.textContent("#rs-side .exact-head")).startsWith("▸"), "the exact date and time section starts folded");
+await p.locator("#rs-side .exact-head").click(); await p.waitForTimeout(60);
 await pick(p, "#rs-side .exact-grid .field:nth-child(1) .dtpick", "2026-10-30", 3, 0, "AM");
-await p.locator("#rs-side .exact button").click(); await p.waitForTimeout(60);
+await p.locator("#rs-side .exact button", { hasText: "Apply" }).click(); await p.waitForTimeout(60);
 ck(await has(p, "#rs-toast", "shake"), "a blocked change shakes its message");
 await p.locator("#rs-savebar button", { hasText: "Cancel" }).click(); await settle(p);
 await p.context().close();
@@ -97,8 +99,10 @@ ck(await vt(p) === n0 + 1, "opening an item's editor slides");
 ck(await p.evaluate((s) => getComputedStyle(document.querySelector(s + " .phead")).backgroundImage.includes("255, 255, 255"), item("MeBxoJbmr1iSLrR9Qeyd")), "the open item's header is white with its own-colour stripe");
 n0 = await vt(p);
 await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + ' [data-row="e"] button', { hasText: "+10" }).click(); await p.waitForTimeout(80);
-ck(await vt(p) === n0 && await has(p, item("MeBxoJbmr1iSLrR9Qeyd") + ' [data-row="e"]', "glow"), "+10 in the phone editor is instant and its End row glows");
-await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + ' button', { hasText: "Undo this change" }).click(); await settle(p);
+ck(await vt(p) === n0 && await has(p, item("MeBxoJbmr1iSLrR9Qeyd") + ' [data-row="e"] .time-big', "glow-text"), "+10 in the phone editor is instant and the new End time glows");
+ck(await p.isVisible(item("MeBxoJbmr1iSLrR9Qeyd") + " .exact-headrow .unsaved"), "\"Unsaved change\" shows while the exact section is folded");
+await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + " .exact-head").click(); await p.waitForTimeout(60);
+await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + ' .exact button', { hasText: /^Undo$/ }).click(); await settle(p);
 n0 = await vt(p);
 await p.click("#rs-late-btn"); await p.waitForTimeout(60);
 ck(await vt(p) === n0 + 1 && await p.evaluate(() => document.querySelector("#rs-sheet .sheet")?.style.viewTransitionName === "rs-sheet"), "Running late panel slides up");
@@ -113,8 +117,9 @@ await settle(p);
 const first = p.locator("#rs-list .pitem").filter({ hasNotText: "Done" }).filter({ hasNotText: "LIVE" }).first();
 const id = await first.getAttribute("data-rs");
 if (!(await first.evaluate((n) => n.classList.contains("open")))) { await first.locator(".phead").click(); await settle(p); }
+if (!(await p.isVisible(item(id) + " .exact-grid"))) { await p.locator(item(id) + " .exact-head").click(); await p.waitForTimeout(60); }
 await pick(p, item(id) + " .exact-grid .field:nth-child(1) .dtpick", "2026-10-30", 1, 0, "AM");
-await p.locator(item(id) + " .exact button").click(); await settle(p); await p.waitForTimeout(900);
+await p.locator(item(id) + " .exact button", { hasText: "Apply" }).click(); await settle(p); await p.waitForTimeout(900);
 const box = await p.locator(item(id)).boundingBox();
 ck(box && box.y + box.height > 0 && box.y < 844, "after re-sorting, the edited activity is still on screen");
 await p.screenshot({ path: SHOTS + "/motion-phone.png" });
@@ -134,7 +139,7 @@ const endBefore = await p.textContent("#gm-end");
 await p.locator('[data-adjust="5"]').scrollIntoViewIfNeeded(); const adj = await p.locator('[data-adjust="5"]').boundingBox();
 for (let i = 0; i < 5; i++) { await p.mouse.click(adj.x + 20, adj.y + 15); await p.waitForTimeout(60); }
 await p.waitForTimeout(80);
-ck(await has(p, "#gm-end", "glow"), "game screen: the End time glows after +5 min");
+ck(await has(p, "#gm-end", "glow-text"), "game screen: the End time glows after +5 min");
 const endAfter = await p.textContent("#gm-end");
 ck(endBefore.startsWith("9:30") && endAfter.startsWith("9:55"), "game screen: 5 quick taps of +5 min all count (" + endBefore + " → " + endAfter + ")");
 await p.click("#gm-time-cancel"); await p.waitForTimeout(100);
@@ -150,9 +155,11 @@ n0 = await vt(p);
 await p.locator(bar("MeBxoJbmr1iSLrR9Qeyd")).click(); await p.waitForTimeout(80);
 await p.locator('#rs-side [data-row="v"] select').selectOption({ index: 1 }); await p.waitForTimeout(80);
 ck(await vt(p) === n0, "reduce motion: nothing slides");
-ck(await has(p, '#rs-side [data-row="v"]', "glow"), "reduce motion: the glow still shows");
+await p.locator('#rs-side [data-row="s"] button', { hasText: "+5" }).click(); await p.waitForTimeout(60);
+ck(await has(p, '#rs-side [data-row="s"] .time-big', "glow-text"), "reduce motion: the glow still shows");
+await p.locator("#rs-side .exact-head").click(); await p.waitForTimeout(60);
 await pick(p, "#rs-side .exact-grid .field:nth-child(1) .dtpick", "2026-10-30", 3, 0, "AM");
-await p.locator("#rs-side .exact button").click(); await p.waitForTimeout(60);
+await p.locator("#rs-side .exact button", { hasText: "Apply" }).click(); await p.waitForTimeout(60);
 ck(await has(p, "#rs-toast", "err-flash") && !(await has(p, "#rs-toast", "shake")), "reduce motion: errors flash red instead of shaking");
 await p.locator("#rs-savebar button", { hasText: "Cancel" }).scrollIntoViewIfNeeded(); const sv2 = await p.locator("#rs-savebar button", { hasText: "Cancel" }).boundingBox();
 await p.mouse.move(sv2.x + 10, sv2.y + 10); await p.mouse.down(); await p.waitForTimeout(150);

@@ -313,7 +313,7 @@ Applies to the activity editor, game screens and run sheet moves. The database a
 *Code:* `ev-save` handler. *Check:* none yet (the run sheet mockup was tested, but that test wasn't carried over).
 
 **EVT-7. Outside, explained.** Activities outside event hours are labelled:
-- "Outside allowed date / time" (no overlap with the event at all);
+- "Outside event hours" (no overlap with the event at all);
 - "Starts before the event starts";
 - "Ends after the event ends".
 
@@ -341,12 +341,18 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 *Code:* `rsControls()`, `rsSetDraft()`.
 
 **RS-4. Exact pickers.**
+- In the editing controls, the section "Or set an exact date and time" folds. It starts folded, except for an activity outside event hours ("Set the date and time (suggested to fit the event)"), where it starts open. Its open or closed state is kept per activity while the run sheet is open.
+- Inside the section: the Starts and Ends pickers, then **Apply** (stages the picked times) and **Undo** (only when the activity has an unsaved change; drops its draft). "Unsaved change" shows on the section's heading line, so it's visible when folded.
 - A date box plus hour, minute (5-minute steps; an existing off-step minute is kept) and AM/PM dropdowns.
 - Dates are limited to the event's dates.
 - The result must be **fully inside** the event, which is stricter than EVT-3.
 - For an activity that's outside, it suggests the same time of day on the first event date where it fits.
 
-*Code:* `dateTimePick()`, `rsSuggestedStart()`. *Check:* `preview-run-sheet`.
+*Code:* `rsControls()`, `dateTimePick()`, `rsSuggestedStart()`, `RS.exactOpen`. *Check:* `preview-run-sheet`, `preview-motion`.
+
+**RS-4a. Editing panel layout (laptop).** From the top: the activity's name; its venue, type, day and state (in white); "Originally scheduled …" if moved on the night; the hint "Moving the start keeps the length the same…"; Start and End with their buttons; Venue; the folding exact date and time section; and "⏰ Outside event hours." (or "Starts before the event starts." / "Ends after the event ends.") for an activity outside the event. With nothing selected it just says "Click an activity on the timeline to change its time or venue."
+
+*Code:* `renderRsSide()`, `rsControls()`.
 
 **RS-5. Running late.**
 - Moves every activity that is upcoming (by saved times), at least partly inside the event, and starts after the chosen point ("Now", or a chosen activity, which is itself included).
@@ -369,8 +375,8 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 The database checks EVT-3 against the event times after the save.
 *Code:* `rsSaveAll()`. *Check:* `emu-run-sheet`.
 
-**RS-8. Overlaps.** Two activities overlap when they share a venue and their times intersect. This shows as text ("⚠ N overlapping (OK if planned)", or a note in the editing panel). It's never highlighted and never blocks.
-*Code:* `rsOverlaps()`.
+**RS-8. Overlaps.** Two activities at the same venue may overlap. Nothing warns about it: they show stacked in their venue's row on the timeline. It never blocks.
+*Code:* `renderTimeline()` (lanes).
 
 ---
 
@@ -420,15 +426,15 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 
 **MOT-3. Glow where you were working.** [4]
 - A 1-second yellow glow (`glow()`) shows on what a tap changed, in the place the tap came from:
-  - run sheet editing controls (side panel or phone editor): the Start, End or Venue rows that changed; the timeline block and list item don't glow;
+  - run sheet editing controls (side panel or phone editor): the new Start or End time itself glows (`glowText()`, a glow around the digits); a venue change doesn't glow; the timeline block and list item don't glow;
   - Running late "Add to changes" and the save bar's Cancel: the moved blocks or list items;
-  - game screens: the Start or End time after −5 / +5 / +10, Start now, End now or Set; a newly added winner; newly added prizes.
+  - game screens: the new Start or End time itself (`glowText()`) after −5 / +5 / +10, Start now, End now or Set; a newly added winner; newly added prizes.
 - Database updates never glow (except MOT-6).
 
-*Code:* `glow()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
+*Code:* `glow()`, `glowText()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
 
 **MOT-4. Slides, and every tap counting.** [5, 6, 7]
-- On the run sheet, these slide for ¼ second (View Transitions), then glow: venue change, Use these times, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
+- On the run sheet, these slide for ¼ second (View Transitions), then glow: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
 - These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
 - The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
 - Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
@@ -487,3 +493,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.
 - **2026-11-14:** New MOT section (MOT-1 to MOT-7) for MOTION-RULES.md: press-in, hover, selected look, glow where you were working, slides only for one-off changes, error shake, cards glowing as they go LIVE. The game screen's time notes now keep their space so buttons don't shift between taps.
 - **2026-11-14:** RS-1: the Now and Midnight labels moved to a strip above the timeline, so they no longer cover activities.
+- **2026-11-14:** Editing panel reworked from the "Editing panel" mock-up (RS-4, new RS-4a): the exact date and time section folds, "Use these times" is now Apply, "Undo this change" is now Undo beside it, "Unsaved change" sits on the section heading, the hint moved above Start, the info line is white, no "Editing" label, and "Outside event hours." replaces the longer message. RS-8: overlap warnings removed. MOT-3: times glow on the digits; venue changes don't glow.

@@ -25,7 +25,7 @@ ck((await t("#event-when")).includes("7:30 PM – 2:00 AM"), "home shows event t
 // Bring Cornhole in with the pickers, push past the end, Save all refused, extend & save.
 await p.goto(f + "#runsheet"); await p.waitForTimeout(400);
 await p.locator("#rs-away .oi", { hasText: "CORNHOLE" }).click();
-await p.locator("#rs-side .exact button").click();
+await p.locator("#rs-side .exact button", { hasText: "Apply" }).click();
 await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await p.waitForTimeout(300);
 ck(await p.locator("#rs-away .oi", { hasText: "CORNHOLE" }).count() === 0, "Cornhole brought into the event and saved");
 await p.click("#rs-late-btn"); await p.locator("#rs-side .seg span", { hasText: /^30/ }).click();

@@ -67,7 +67,7 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Previously only the page stopped a second 50/50, so two admins saving at the same instant could both succeed. Now the database keeps one "50/50 slot" record naming the 50/50, and making an activity the 50/50 must claim it in the same save. Only one claim can win.
 
 **Activities can share a venue at the same time** (Nov 3, 2026)
-- Overlaps at the same venue are allowed and shown as a text note ("OK if planned"), never blocked and never highlighted on the timeline.
+- Overlaps at the same venue are allowed and never blocked. Since Nov 14 there are no overlap warnings at all: overlapping activities simply show stacked in their venue's row on the run sheet.
 
 **Venues are editable in Admin** (Nov 2, 2026)
 - A venue still in use by activities can't be removed until they move elsewhere. There's always at least one venue.
@@ -152,6 +152,13 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Phones: a list in time order (Earlier, On now, Coming up).
 - Admins only.
 - Activities are chosen by clicking or tapping, not dragged, because dragging is error-prone on phones.
+
+**The run sheet's editing panel, reworked from a mock-up** (Nov 14, 2026)
+- Designed on its own page ("Editing panel" mock-up), then brought into the run sheet.
+- No "Editing" label. The activity's details line is white, and the hint "Moving the start keeps the length the same…" sits above Start.
+- "Or set an exact date and time" folds, and starts folded (open for an activity outside event hours, since picking a time inside is the fix). Inside it: Apply (was "Use these times"), then Undo (was "Undo this change"). "Unsaved change" shows on the section's heading line, so it's visible while folded.
+- An activity outside the event just says "⏰ Outside event hours."
+- Glow: a changed time glows on its digits rather than a ring around its row; changing the venue doesn't glow, because you're already looking at the dropdown.
 
 **Times are picked with dropdowns that never roll over** (Nov 3, 2026)
 - A date box plus hour, minute and AM/PM dropdowns, replacing the browser's own time box, where 59 rolls over to 00 and 12 to 1.
