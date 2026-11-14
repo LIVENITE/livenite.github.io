@@ -175,5 +175,11 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - It's updated in the same change as any behaviour change (DATA-RULES.md, checklist item 10), with a dated change history. Disagreements between code and decisions go to its Open questions, never silently resolved.
 - A plain-language version for event helpers comes later, once the design settles.
 
+**Motion and feedback rules** (Nov 14, 2026)
+- MOTION-RULES.md covers how every screen responds to taps, shows what changed and moves things, on guest and admin screens alike. Every change is checked against it and its test checklist, like DATA-RULES.md.
+- Why: the run sheet's first animations (preview Version 17) felt disorienting. The real problem was that a tapped item gave no sign it had been tapped. The rules were settled from questions and the "Motion options" mock-up.
+- Key choices: everything tappable presses in. Main buttons and run sheet blocks get a strong hover on computers. A selected item turns white with a stripe of its own colour across about a third of it. What changed glows yellow for 1 second, only where you were working. Things that move slide for ¼ second, then glow. Buttons tapped repeatedly (like +5) change instantly instead of sliding, because a slide makes the browser ignore taps anywhere on the page. Changing screens is instant. Errors shake (a red flash with reduce motion) and vibrate on Android phones.
+- The run sheet animations in the design preview (Version 17) were built before these rules and still need reworking to match them.
+
 **Nothing goes live without asking first** (ongoing)
 - Changes are made and tested in the design preview first. Publishing to the live site, or changing the live database rules, happens only after an explicit go-ahead.
