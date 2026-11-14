@@ -526,6 +526,7 @@ function renderNavRows(force) {
       if (at < 0 || to < 0 || to >= d.nav.length) return;
       d.nav[at] = d.nav[to]; d.nav[to] = me;
       renderNavRows(true); markArea(navArea);
+      glow($("a-nav").children[to]); // the moved menu item glows in its new place (MOTION-RULES rule 4)
     };
     var up = el("button", "icon-btn", "↑"); up.type = "button"; up.setAttribute("aria-label", "Move up"); up.disabled = i === 0;
     up.addEventListener("click", function () { move(-1); });
@@ -580,7 +581,10 @@ $("a-add-venue").addEventListener("click", function () {
   d.push({ id: "v" + Date.now().toString(36), name: "" });
   renderVenueRows(true); markArea(venueArea);
   var inputs = $("a-venues").querySelectorAll("input"); inputs[inputs.length - 1].focus();
+  glow($("a-venues").lastElementChild); // the new venue row glows (MOTION-RULES rule 4)
 });
+// The draw guide's steps slide in when it's unfolded (MOTION-RULES rule 7).
+document.querySelector("#gm-guide details").addEventListener("toggle", function (e) { if (e.target.open && canMove()) replayClass($("gm-guide-steps"), "panel-in"); });
 function renderAdmin() { fillTitleInputs(); renderNavRows(); renderVenueRows(); renderActList(); }
 
 // ---------- Admin: activities editor ----------

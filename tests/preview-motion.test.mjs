@@ -134,6 +134,15 @@ await p.click("#m-cancel"); await p.waitForTimeout(60);
 ck(await has(p, "#m-editor", "panel-out") && await p.isVisible("#m-editor"), "the editor slides out when closed");
 await p.waitForTimeout(400);
 ck(!(await p.isVisible("#m-editor")), "then it's hidden");
+// Header, footer and Admin editors.
+const pressed = async (sel) => { await p.locator(sel).first().scrollIntoViewIfNeeded(); const bx = await p.locator(sel).first().boundingBox(); await p.mouse.move(bx.x + bx.width / 2, bx.y + bx.height / 2); await p.mouse.down(); await p.waitForTimeout(150);
+  const t = await p.locator(sel).first().evaluate((n) => getComputedStyle(n).transform); await p.mouse.move(2, 2); await p.mouse.up(); return t.startsWith("matrix(0.95"); };
+ck(await pressed("#mark") && await pressed(".topbar .admin-link") && await pressed("footer a"), "header title, header Admin button and footer links press in");
+await p.locator('#a-nav button[aria-label="Move down"]').first().click(); await p.waitForTimeout(60);
+ck(await p.evaluate(() => document.querySelector("#a-nav").children[1].classList.contains("glow")), "Admin menu: a moved item glows in its new place");
+await p.click("#a-add-venue"); await p.waitForTimeout(60);
+ck(await p.evaluate(() => document.querySelector("#a-venues").lastElementChild.classList.contains("glow")), "Admin venues: a new venue row glows");
+await p.click("#n-cancel").catch(() => {}); await p.click("#v-cancel").catch(() => {}); await p.waitForTimeout(100);
 await p.goto(PREVIEW + "#gm-" + PLINKO); await p.waitForTimeout(500);
 const endBefore = await p.textContent("#gm-end");
 await p.locator('[data-adjust="5"]').scrollIntoViewIfNeeded(); const adj = await p.locator('[data-adjust="5"]').boundingBox();

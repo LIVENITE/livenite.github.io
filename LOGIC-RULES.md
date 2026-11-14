@@ -413,8 +413,8 @@ The database checks EVT-3 against the event times after the save.
 How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets are MOTION-RULES rules.
 
 **MOT-1. Press-in and hover.** [1, 2]
-- Buttons, × buttons, menu links, the Draws menu, home cards, run sheet blocks, phone list items, the outside-hours list, tick boxes, dropdowns and the Running late "By" choices shrink to 95% and darken while pressed (home cards to 97%). Disabled buttons don't.
-- On computers with a mouse: a subtle hover on most things; main (yellow) buttons and run sheet blocks lift 3 px with a light ring. Pressing always wins over hovering.
+- Buttons, × buttons, the header (site title and Admin button), menu links, the Draws menu, footer links, "← Back" links, the floating 50/50 badge, the draw guide's fold, Admin's menu tick boxes, home cards, run sheet blocks, phone list items, the outside-hours list, tick boxes, dropdowns and the Running late "By" choices shrink to 95% and darken while pressed (home cards to 97%). Disabled buttons don't.
+- On computers with a mouse: a subtle hover on most things; main (yellow) buttons, run sheet blocks and the floating 50/50 badge lift 3 px with a light ring. Pressing always wins over hovering.
 
 *Code:* `cards.css`, "Motion and feedback". *Check:* `preview-motion`.
 
@@ -428,6 +428,7 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - A 1-second yellow glow (`glow()`) shows on what a tap changed, in the place the tap came from:
   - run sheet editing controls (side panel or phone editor): the new Start or End time itself glows (`glowText()`, a glow around the digits); a venue change doesn't glow; the timeline block and list item don't glow;
   - Running late "Add to changes" and the save bar's Cancel: the moved blocks or list items;
+  - Admin: a menu item moved with ↑ / ↓ (in its new place); a newly added venue row;
   - game screens: the new Start or End time itself (`glowText()`) after −5 / +5 / +10, Start now, End now or Set; a newly added winner; newly added prizes.
 - Database updates never glow (except MOT-6).
 
@@ -436,7 +437,7 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 **MOT-4. Slides, and every tap counting.** [5, 6, 7]
 - On the run sheet, these slide for ¼ second (View Transitions), then glow: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
 - These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
-- The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
+- The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out, and the draw guide's steps slide in when it's unfolded, with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
 - Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
 - No slides in browsers without View Transitions, or with reduce motion on (`canMove()`).
 
@@ -494,3 +495,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-14:** New MOT section (MOT-1 to MOT-7) for MOTION-RULES.md: press-in, hover, selected look, glow where you were working, slides only for one-off changes, error shake, cards glowing as they go LIVE. The game screen's time notes now keep their space so buttons don't shift between taps.
 - **2026-11-14:** RS-1: the Now and Midnight labels moved to a strip above the timeline, so they no longer cover activities.
 - **2026-11-14:** Editing panel reworked from the "Editing panel" mock-up (RS-4, new RS-4a): the exact date and time section folds, "Use these times" is now Apply, "Undo this change" is now Undo beside it, "Unsaved change" sits on the section heading, the hint moved above Start, the info line is white, no "Editing" label, and "Outside event hours." replaces the longer message. RS-8: overlap warnings removed. MOT-3: times glow on the digits; venue changes don't glow.
+- **2026-11-14:** MOT-1, MOT-3, MOT-4 extended to every page: the header, footer, back links, floating 50/50 badge and draw guide press in; Admin's moved menu items and new venues glow; the draw guide's steps slide in.

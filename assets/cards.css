@@ -457,17 +457,23 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 /* ================= Motion and feedback (MOTION-RULES.md) ================= */
 /* Rule 1: everything tappable presses in. Cards keep their own transition (set above). */
 .btn, .danger, .icon-btn, .nav a, .nav-drop, #draws-menu a, .runsheet .bar, .side-label, .outside-list .oi, .pitem .phead,
-.group-h.clickable, .seg span, .check, select, #fp-close { transition: transform 90ms ease-out, filter 90ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out; }
+.group-h.clickable, .seg span, .check, select, #fp-close, .exact-head,
+.mark, .admin-link, .back, .fp-link, footer a, .guide summary, .nav-row input[type=checkbox] { transition: transform 90ms ease-out, filter 90ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out; }
 .btn:not(:disabled):active, .danger:not(:disabled):active, .icon-btn:active, .nav a:active, .nav-drop:active, #draws-menu a:active,
 .runsheet .bar:active, .side-label:active, .outside-list .oi:active, .pitem .phead:active, .group-h.clickable:active, .seg span:active,
-.check:active, select:active, #fp-close:active { transform: scale(0.95); filter: brightness(0.82); }
+.check:active, select:active, #fp-close:active, .exact-head:active,
+.mark:active, .admin-link:active, .back:active, .fp-link:active, footer a:active, .guide summary:active, .nav-row input[type=checkbox]:active { transform: scale(0.95); filter: brightness(0.82); }
 a.card:active { transform: scale(0.97); filter: brightness(0.9); }
 
 /* Rule 2: hover, on computers with a mouse only. Main buttons and run sheet blocks get the strong hover. */
 @media (hover: hover) and (pointer: fine) {
   .btn.ghost:not(:disabled):hover, .icon-btn:hover, .danger:not(:disabled):hover, .nav-drop:hover, .seg span:hover, select:hover,
   .outside-list .oi:hover, .group-h.clickable:hover, .side-label:hover, #fp-close:hover { background-color: rgb(255 246 230 / 0.08); box-shadow: 0 4px 14px rgb(0 0 0 / 0.35); }
-  .check:hover { filter: brightness(1.15); }
+  .check:hover, .mark:hover, .back:hover, footer a:hover, .guide summary:hover, .exact-head:hover { filter: brightness(1.2); }
+  .admin-link:hover { background-color: rgb(255 246 230 / 0.08); box-shadow: 0 4px 14px rgb(0 0 0 / 0.35); }
+  /* The floating 50/50 badge is a large tile, so it gets the strong hover. */
+  .fp-link:hover { transform: translateY(-3px); box-shadow: 0 0 0 3px var(--text), 0 8px 20px rgb(0 0 0 / 0.5); }
+  .fp-link:hover:active, .admin-link:active { transform: scale(0.95); filter: brightness(0.82); box-shadow: none; }
   .btn:not(.ghost):not(:disabled):hover, .runsheet .bar:hover { transform: translateY(-3px); box-shadow: 0 0 0 3px var(--text), 0 8px 20px rgb(0 0 0 / 0.5); }
   /* Pressing still wins over hovering. */
   .btn:not(:disabled):active, .runsheet .bar:active, .danger:not(:disabled):active, .icon-btn:active, .seg span:active, select:active,
@@ -536,6 +542,7 @@ a.card:active { transform: scale(0.97); filter: brightness(0.9); }
 /* Rule 10: with reduce motion, nothing slides, shrinks or shakes. Highlights still show. */
 @media (prefers-reduced-motion: reduce) {
   .btn:active, .danger:active, .icon-btn:active, .nav a:active, .nav-drop:active, #draws-menu a:active, .runsheet .bar:active, .side-label:active,
-  .outside-list .oi:active, .pitem .phead:active, .group-h.clickable:active, .seg span:active, .check:active, select:active, #fp-close:active, a.card:active { transform: none !important; }
+  .outside-list .oi:active, .pitem .phead:active, .group-h.clickable:active, .seg span:active, .check:active, select:active, #fp-close:active, a.card:active,
+  .exact-head:active, .mark:active, .admin-link:active, .back:active, .fp-link:active, footer a:active, .guide summary:active, .nav-row input[type=checkbox]:active, .fp-link:hover { transform: none !important; }
   .panel-in, .panel-out { animation: none; }
 }
