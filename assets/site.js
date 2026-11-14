@@ -1236,7 +1236,7 @@ function rsState(a) { var n = rsNow(); return n >= a.e ? "done" : n >= a.s ? "li
 function rsOverlaps(a, list) { var c = rsCur(a); return list.filter(function (b) { var o = rsCur(b); return b.id !== a.id && o.v === c.v && o.s < c.e && c.s < o.e; }); }
 function rsOutside(c, ev) { ev = ev || rsEv(); return !!ev && (c.s < ev.s || c.e > ev.e); }
 function rsInWindow(c, ev) { ev = ev || rsEv(); return !ev || (c.e > ev.s && c.s < ev.e); }
-function rsOutsideText(c) { var ev = rsEv(); return c.e <= ev.s || c.s >= ev.e ? "Not during the event" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
+function rsOutsideText(c) { var ev = rsEv(); return c.e <= ev.s || c.s >= ev.e ? "Outside allowed date / time" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
 function hm(m) { return clock(toMs(m)); }
 function hmU(m) { return hm(m).replace("p.m.", "PM").replace("a.m.", "AM"); }
 function hmShort(m) { return hm(m).replace(/ [ap]\.m\./, ""); }

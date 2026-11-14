@@ -313,7 +313,7 @@ Applies to the activity editor, game screens and run sheet moves. The database a
 *Code:* `ev-save` handler. *Check:* none yet (the run sheet mockup was tested, but that test wasn't carried over).
 
 **EVT-7. Outside, explained.** Activities outside event hours are labelled:
-- "Not during the event" (no overlap with the event at all);
+- "Outside allowed date / time" (no overlap with the event at all);
 - "Starts before the event starts";
 - "Ends after the event ends".
 
