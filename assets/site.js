@@ -11,6 +11,29 @@ var MIN = 60000;
 var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
 var $ = function (id) { return document.getElementById(id); };
 
+// ---------- Motion and feedback helpers (MOTION-RULES.md) ----------
+// Movement only where the browser supports slides (View Transitions) and reduce motion is off; otherwise changes are instant.
+function canMove() { return !reduceMotion && typeof document.startViewTransition === "function"; }
+function replayClass(n, cls) { if (!n) return; n.classList.remove(cls); void n.offsetWidth; n.classList.add(cls); }
+// Rule 4: what changed glows yellow for 1 second (also with reduce motion: it doesn't move anything).
+function glow(n) { replayClass(n, "glow"); }
+// Rule 11: errors shake (a red flash with reduce motion) and vibrate on phones that allow it (not iPhones).
+function shake(n) { replayClass(n, reduceMotion ? "err-flash" : "shake"); try { if (navigator.vibrate) navigator.vibrate(60); } catch (e) {} }
+// Rule 7: panels slide in when they open and out when they close.
+function panelIn(n) {
+  clearTimeout(n.outTimer);
+  var opening = n.hidden || n.classList.contains("panel-out");
+  n.classList.remove("panel-out"); n.hidden = false;
+  if (opening && canMove()) replayClass(n, "panel-in");
+}
+function panelOut(n) {
+  if (n.hidden) return;
+  if (!canMove()) { n.hidden = true; return; }
+  n.classList.remove("panel-in"); n.classList.add("panel-out");
+  clearTimeout(n.outTimer);
+  n.outTimer = setTimeout(function () { n.classList.remove("panel-out"); n.hidden = true; }, 250);
+}
+
 var STYLES = [
   { id: "marquee", name: "Marquee (sunflower)" },
   { id: "sunset", name: "Sunset (tangerine)" },
@@ -172,7 +195,7 @@ function scheduleOf(a) {
 }
 function errText(err) { return (err && err.code) || "error"; }
 function note(text) { $("conn-note").textContent = text; $("conn-note").hidden = !text; }
-function bad(id, text) { $(id).textContent = text; $(id).classList.add("bad"); }
+function bad(id, text) { $(id).textContent = text; $(id).classList.add("bad"); shake($(id)); }
 function ok(id, text) { $(id).textContent = text; $(id).classList.remove("bad"); }
 
 function el(tag, cls, text) { var n = document.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
@@ -215,7 +238,7 @@ function renderChrome() {
       var btn = el("button", "nav-drop"); btn.type = "button"; btn.id = "draws-btn";
       btn.setAttribute("aria-expanded", "false"); btn.setAttribute("aria-controls", "draws-menu");
       btn.append(document.createTextNode("Draws "), el("span", "caret", "▾"));
-      btn.addEventListener("click", function (e) { e.stopPropagation(); toggleDraws(menu.hidden); });
+      btn.addEventListener("click", function (e) { e.stopPropagation(); toggleDraws(menu.hidden || menu.classList.contains("panel-out")); });
       menu.replaceChildren.apply(menu, links);
       nav.append(btn);
       return;
@@ -231,13 +254,13 @@ function toggleDraws(open) {
   var btn = $("draws-btn"), menu = $("draws-menu");
   if (!btn) return;
   btn.setAttribute("aria-expanded", String(open));
-  menu.hidden = !open;
-  if (!open) return;
+  if (!open) { panelOut(menu); return; }
+  panelIn(menu);
   var bar = document.querySelector(".topbar").getBoundingClientRect(), r = btn.getBoundingClientRect();
   var left = Math.max(16, Math.min(r.left, innerWidth - menu.offsetWidth - 16));
   menu.style.left = (left - bar.left) + "px"; menu.style.top = (r.bottom - bar.top + 6) + "px";
 }
-document.addEventListener("click", function (e) { if (!$("draws-menu").hidden && !$("draws-menu").contains(e.target)) toggleDraws(false); });
+document.addEventListener("click", function (e) { if (!$("draws-menu").hidden && !$("draws-menu").contains(e.target) && !(e.target.closest && e.target.closest("#draws-btn"))) toggleDraws(false); });
 document.addEventListener("keydown", function (e) { if (e.key === "Escape" && !$("draws-menu").hidden) { toggleDraws(false); $("draws-btn").focus(); } });
 $("draws-menu").addEventListener("click", function (e) { if (e.target.closest("a")) toggleDraws(false); });
 addEventListener("resize", function () { toggleDraws(false); });
@@ -296,8 +319,16 @@ function cardFor(a, now, opts) {
   return c;
 }
 
+// Each home card's last state, so a card glows once when it goes LIVE while the page is open (MOTION-RULES rule 12).
+var cardWas = null, cardNow = {};
+function homeCard(a, now) {
+  var c = cardFor(a, now), st = stateOf(a, now); cardNow[a.id] = st;
+  if (cardWas && cardWas[a.id] && cardWas[a.id] !== "live" && st === "live") c.classList.add("glow");
+  return c;
+}
 function renderCards() {
   var now = Date.now(), box = $("cards"); box.replaceChildren();
+  cardWas = loaded ? cardNow : null; cardNow = {};
   if (loaded && !acts.length) { box.append(el("p", "meta", "Tonight's line-up is coming soon. Check back shortly.")); return; }
   var list = sorted();
   // Live and next first, then the 50/50 pot, then the rest of the night in order.
@@ -310,11 +341,11 @@ function renderCards() {
   var d = draw();
   var isD = function (a) { return d && a === d && stateOf(a, now) === "upcoming"; };
   var rest = upcoming.filter(function (a) { return !isD(a); });
-  live.forEach(function (a) { box.append(cardFor(a, now)); });
-  rest.slice(0, 1).forEach(function (a) { box.append(cardFor(a, now)); });
-  if (d && isD(d)) box.append(cardFor(d, now));
-  rest.slice(1).forEach(function (a) { box.append(cardFor(a, now)); });
-  done.forEach(function (a) { box.append(cardFor(a, now)); });
+  live.forEach(function (a) { box.append(homeCard(a, now)); });
+  rest.slice(0, 1).forEach(function (a) { box.append(homeCard(a, now)); });
+  if (d && isD(d)) box.append(homeCard(d, now));
+  rest.slice(1).forEach(function (a) { box.append(homeCard(a, now)); });
+  done.forEach(function (a) { box.append(homeCard(a, now)); });
 }
 
 // ---------- Activity page ----------
@@ -409,8 +440,8 @@ function discardAll() { areas.forEach(function (o) { if (o.shown() && o.dirty())
 
 // Rule 4: leaving with unsaved changes asks first.
 var leaveAction = null, leaveAreas = null;
-function askLeave(action, only) { leaveAction = action; leaveAreas = only || null; $("leave-bar").hidden = false; $("leave-stay").focus(); }
-$("leave-stay").addEventListener("click", function () { $("leave-bar").hidden = true; leaveAction = null; });
+function askLeave(action, only) { leaveAction = action; leaveAreas = only || null; panelIn($("leave-bar")); $("leave-stay").focus(); }
+$("leave-stay").addEventListener("click", function () { panelOut($("leave-bar")); leaveAction = null; });
 $("leave-go").addEventListener("click", function () {
   $("leave-bar").hidden = true;
   var a = leaveAction, only = leaveAreas; leaveAction = null; leaveAreas = null;
@@ -673,14 +704,14 @@ function openEditor(a) {
   $("m-look").value = a ? a.style : STYLES[acts.length % STYLES.length].id;
   fillGraphics(a ? a.graphic || "suggest" : "suggest");
   $("m-status").classList.remove("unsaved"); ok("m-status", "");
-  $("m-editor").hidden = false;
+  panelIn($("m-editor"));
   // A new activity counts as unsaved from the start: leaving would lose it.
   editorBase = isNew ? {} : editorValues();
   renderPreview(); renderActList(); editorArea.mark();
   $("m-editor").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   $("m-title").focus({ preventScroll: true });
 }
-function closeEditor() { $("m-editor").hidden = true; $("m-editor").classList.remove("dirty"); editing = null; isNew = false; editorBase = null; renderActList(); }
+function closeEditor() { panelOut($("m-editor")); $("m-editor").classList.remove("dirty"); editing = null; isNew = false; editorBase = null; renderActList(); }
 $("m-add").addEventListener("click", function () { openEditorSafely(null); });
 $("m-hasgm").addEventListener("change", function () { $("m-gm-field").hidden = !$("m-hasgm").checked; if ($("m-hasgm").checked) $("m-gm").focus(); });
 // Cancel throws the draft away (rule 4).
@@ -818,6 +849,7 @@ var timeDraft = null; // { id, start, len }
 function draftStart(a) { return timeDraft && timeDraft.id === a.id ? timeDraft.start : startOf(a); }
 function draftLen(a) { return timeDraft && timeDraft.id === a.id ? timeDraft.len : a.len; }
 function setTimes(a, start, len) {
+  if (len < 1 || len > 720) gmGlowNext = false;
   if (len < 1) { setStatus("gm-time-status", "The end time can't be before the start (" + clock(start) + ").", true); return; }
   if (len > 720) { setStatus("gm-time-status", "That's more than 12 hours after the start. Pick an earlier end time.", true); return; }
   $("gm-time-status").classList.remove("bad");
@@ -841,17 +873,22 @@ var timeArea = editArea({
     return updateDoc(actRef(a), f);
   }
 });
+var gmGlowNext = false; // set by the time buttons, so only a tap (not a database update) makes the times glow
 function renderTime(a) {
   var now = Date.now(), start = draftStart(a), len = draftLen(a), end = start + len * MIN;
+  var tapped = gmGlowNext; gmGlowNext = false;
+  if (tapped && $("gm-start").textContent !== clock(start)) glow($("gm-start"));
+  if (tapped && $("gm-end").textContent !== clock(end)) glow($("gm-end"));
   $("gm-start").textContent = clock(start);
   $("gm-end").textContent = clock(end);
-  $("gm-start-was").hidden = start === startOf(a);
+  // These notes keep their space even when empty, so the buttons below never shift between taps (MOTION-RULES rule 6).
+  $("gm-start-was").classList.toggle("unseen", start === startOf(a));
   $("gm-start-was").textContent = "Saved: " + clock(startOf(a));
   // Show the saved end next to a changed one, and the original slot if times were moved on the night.
   var sch = scheduleOf(a), was = [];
   if (end !== endOf(a)) was.push("Saved: " + clock(endOf(a)));
   if (sch && (sch.s !== start || sch.e !== end)) was.push("Scheduled: " + clock(sch.s) + " – " + clock(sch.e));
-  $("gm-was").hidden = !was.length; $("gm-was").textContent = was.join(" · ");
+  $("gm-was").classList.toggle("unseen", !was.length); $("gm-was").textContent = was.length ? was.join(" · ") : "\u00a0";
   var left = endOf(a) - now;
   $("gm-left").textContent = now < startOf(a) ? "Starts in " + words(startOf(a) - now) + "." : left > 0 ? words(left) + " to go" : "Finished";
   // End now only makes sense once the (draft) start has passed and before the end.
@@ -863,17 +900,17 @@ function renderTime(a) {
 $("gm-start-now").addEventListener("click", function () {
   var a = gmGame(); if (!a) return;
   var start = Math.floor(Date.now() / MIN) * MIN;
-  setTimes(a, start, draftLen(a));
+  gmGlowNext = true; setTimes(a, start, draftLen(a));
 });
 document.querySelectorAll("[data-adjust]").forEach(function (btn) {
-  btn.addEventListener("click", function () { var a = gmGame(); if (a) moveEnd(a, draftLen(a) + Number(btn.getAttribute("data-adjust"))); });
+  btn.addEventListener("click", function () { var a = gmGame(); if (a) { gmGlowNext = true; moveEnd(a, draftLen(a) + Number(btn.getAttribute("data-adjust"))); } });
 });
 $("gm-end-now").addEventListener("click", function () {
   var a = gmGame(); if (!a) return;
   var start = draftStart(a);
   if (Date.now() < start) { setStatus("gm-time-status", "This game hasn't started yet (it starts at " + clock(start) + ").", true); return; }
   // Round down so the game ends this minute, not the next one.
-  moveEnd(a, Math.max(1, Math.floor((Date.now() - start) / MIN)));
+  gmGlowNext = true; moveEnd(a, Math.max(1, Math.floor((Date.now() - start) / MIN)));
 });
 $("gm-set-form").addEventListener("submit", function (e) {
   e.preventDefault();
@@ -881,7 +918,7 @@ $("gm-set-form").addEventListener("submit", function (e) {
   var p = ($("gm-set").value || "").split(":"); if (p.length < 2) return;
   var start = draftStart(a), d = new Date(start); d.setHours(parseInt(p[0], 10), parseInt(p[1], 10), 0, 0);
   if (d.getTime() < start) d.setDate(d.getDate() + 1);
-  moveEnd(a, Math.round((d.getTime() - start) / MIN));
+  gmGlowNext = true; moveEnd(a, Math.round((d.getTime() - start) / MIN));
 });
 
 // Winners: Add to list and × change the draft; Save applies them to the latest saved list, so winners
@@ -941,6 +978,7 @@ $("gm-win-form").addEventListener("submit", function (e) {
   editWins(a).adds.push(name.slice(0, 80));
   $("gm-win-name").value = ""; $("gm-ticketno").value = "";
   renderWinners(a); markArea(winArea);
+  var added = $("gm-win-list").querySelectorAll(".win-row.adding"); glow(added[added.length - 1]);
   $("gm-win-name").focus();
 });
 
@@ -1086,6 +1124,7 @@ function addSlots(n) {
   if (d.rows.length + n > 200) { setStatus("gm-draws-status", "That's more than 200 prizes, the most one list holds.", true); return; }
   for (var i = 0; i < n; i++) d.rows.push({ label: "", ticket: "", name: "", orig: null });
   renderSlots(a, true); markArea(slotsArea);
+  var rows = $("gm-slots").querySelectorAll(".slot-row"); for (var j = rows.length - n; j < rows.length; j++) glow(rows[j]);
 }
 $("gm-add-slot").addEventListener("click", function () { addSlots(1); var t = $("gm-slots").querySelectorAll("input.tno"); if (t.length) t[t.length - 1].focus(); });
 $("gm-add-5").addEventListener("click", function () { addSlots(5); });
@@ -1202,10 +1241,11 @@ function hm(m) { return clock(toMs(m)); }
 function hmU(m) { return hm(m).replace("p.m.", "PM").replace("a.m.", "AM"); }
 function hmShort(m) { return hm(m).replace(/ [ap]\.m\./, ""); }
 function rsDayName(m) { return new Date(toMs(m)).toLocaleDateString("en-CA", { weekday: "short", month: "short", day: "numeric" }); }
-function rsToast(t) { var n = $("rs-toast"); n.textContent = t; n.hidden = false; clearTimeout(rsToast.t); rsToast.t = setTimeout(function () { n.hidden = true; }, 3200); }
+function rsToast(t) { var n = $("rs-toast"); n.textContent = t; n.hidden = false; if (/^(Blocked|The end can|Pick a date)/.test(t)) shake(n); clearTimeout(rsToast.t); rsToast.t = setTimeout(function () { n.hidden = true; }, 3200); }
 function rsByIdIn(list, id) { return list.filter(function (a) { return a.id === id; })[0]; }
 
-function rsSetDraft(a, s, e, v) {
+// slide: true for one-off changes (Use these times). Repeat-tap buttons (+/−, Start now, End now) change instantly (MOTION-RULES rule 5).
+function rsSetDraft(a, s, e, v, slide) {
   var c = rsCur(a); v = v || c.v;
   if (e - s < 1) { rsToast("The end can't be before the start."); return; }
   var ev = rsEv();
@@ -1216,7 +1256,7 @@ function rsSetDraft(a, s, e, v) {
   }
   RS.drafts[a.id] = { s: s, e: e, v: v };
   if (!rsChanged(a)) delete RS.drafts[a.id];
-  rsTap([a.id]);
+  rsTap({ ctl: { id: a.id, prev: c }, instant: !slide });
 }
 
 // ---- Date and time picker: a date box plus hour, minute and AM/PM dropdowns (nothing rolls over) ----
@@ -1294,15 +1334,15 @@ $("ev-save").addEventListener("click", function () {
   var d = RS.evDraft || rsEvNow() || { s: evStartPick.get(), e: evEndPick.get() };
   if (!RS.evDraft && !rsEv()) d = { s: evStartPick.get(), e: evEndPick.get() };
   var p = rsEvCheck(d), st = $("ev-status");
-  if (p) { st.className = "ev-status bad"; st.textContent = p; return; }
+  if (p) { st.className = "ev-status bad"; st.textContent = p; shake(st); return; }
   // Changing the event can't leave activities that are inside it now stranded outside (rule 8, both sides).
   var cur = rsEv(), list = rsActs();
   // (Setting them for the first time is fine: anything outside is then flagged for you to move.)
   var stranded = cur ? list.filter(function (a) { var c = rsCur(a); return !rsOutside(c, cur) && rsOutside(c, d); }) : [];
-  if (stranded.length) { st.className = "ev-status bad"; st.textContent = "Those times would leave " + stranded.map(function (a) { return a.t; }).join(", ") + " outside the event. Move them first."; return; }
+  if (stranded.length) { st.className = "ev-status bad"; st.textContent = "Those times would leave " + stranded.map(function (a) { return a.t; }).join(", ") + " outside the event. Move them first."; shake(st); return; }
   st.className = "ev-status"; st.textContent = "Saving…";
   saveEventTimes(d).then(function () { RS.evDraft = null; st.className = "ev-status ok"; st.textContent = "Saved. The run sheet and guests' home page show the new times."; refresh(); renderRunSheet(true); },
-    function (err) { st.className = "ev-status bad"; st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; });
+    function (err) { st.className = "ev-status bad"; st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; shake(st); });
 });
 $("ev-cancel").addEventListener("click", function () { RS.evDraft = null; $("ev-status").className = "ev-status"; $("ev-status").textContent = ""; renderEventPanel(true); renderRsSaveBar(); });
 
@@ -1320,10 +1360,10 @@ function renderLate(box, list) {
   var sel = el("select", "sel-box"); sel.append(new Option("Now (" + hm(rsNow()) + ")", "now"));
   list.filter(function (a) { return rsState(a) === "next" && rsInWindow(rsCur(a)); }).sort(function (p, q) { return rsCur(p).s - rsCur(q).s; })
     .forEach(function (a) { sel.append(new Option(a.t + " (" + hmShort(rsCur(a).s) + ") and after", a.id)); });
-  sel.value = RS.late.after; sel.addEventListener("change", function () { RS.late.after = sel.value; rsTap(); });
+  sel.value = RS.late.after; sel.addEventListener("change", function () { RS.late.after = sel.value; rsTap({ instant: true }); });
   f1.append(sel); box.append(f1);
   var f2 = el("div", "field", "By"), seg = el("div", "seg");
-  [5, 10, 15, 30, 60].forEach(function (n) { var b = el("span", RS.late.by === n ? "on" : "", n + (n === 60 ? " min" : "")); b.addEventListener("click", function () { RS.late.by = n; rsTap(); }); seg.append(b); });
+  [5, 10, 15, 30, 60].forEach(function (n) { var b = el("span", RS.late.by === n ? "on" : "", n + (n === 60 ? " min" : "")); b.addEventListener("click", function () { RS.late.by = n; rsTap({ instant: true }); }); seg.append(b); });
   f2.append(seg); box.append(f2);
   box.append(el("span", "rs-h moving", moves.length + " WILL MOVE"));
   var ul = el("ul", "late-list");
@@ -1337,7 +1377,7 @@ function renderLate(box, list) {
     var need = Math.ceil(Math.max.apply(null, past.map(function (a) { return rsCur(a).e + RS.late.by; })) / 15) * 15;
     var x = el("button", "btn small", "Extend the event to " + hmU(need)); x.type = "button"; x.style.marginTop = "8px";
     if (need - rsEvNow().s > EVENT_MAX_MIN) { x.disabled = true; w.append(el("div", null, "Extending to " + hmU(need) + " would make the event longer than 12 hours.")); }
-    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all, or press Save there."); rsTap(null, true); });
+    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all, or press Save there."); rsTap({ instant: true, force: true }); });
     w.append(el("br"), x); box.append(w);
   }
   box.append(el("span", "rs-h", "SKIPPED: LIVE OR FINISHED"));
@@ -1346,7 +1386,7 @@ function renderLate(box, list) {
   box.append(ul2);
   var row = el("div", "rs-row");
   var add = el("button", "btn", "Add to changes"); add.type = "button"; add.disabled = !moves.length;
-  add.addEventListener("click", function () { var by = RS.late.by; moves.forEach(function (a) { var c = rsCur(a); RS.drafts[a.id] = { s: c.s + by, e: c.e + by, v: c.v }; }); RS.late = null; rsToast(moves.length + " activities staged. Press Save all to apply."); rsTap(moves.map(function (a) { return a.id; })); });
+  add.addEventListener("click", function () { var by = RS.late.by; moves.forEach(function (a) { var c = rsCur(a); RS.drafts[a.id] = { s: c.s + by, e: c.e + by, v: c.v }; }); RS.late = null; rsToast(moves.length + " activities staged. Press Save all to apply."); rsTap({ flash: moves.map(function (a) { return a.id; }) }); });
   var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.addEventListener("click", function () { RS.late = null; rsTap(); });
   row.append(add, cancel); box.append(row, el("p", "meta", "Nothing moves for guests until you press Save all."));
 }
@@ -1360,8 +1400,9 @@ function rsSuggestedStart(a) {
 }
 function rsControls(a, list) {
   var c = rsCur(a), box = el("div", "rs-controls"), ev = rsEv(), now = rsNow();
+  box.setAttribute("data-ctl", a.id);
   function row(which) {
-    var r = el("div", "time-row");
+    var r = el("div", "time-row"); r.setAttribute("data-row", which);
     var val = which === "s" ? c.s : c.e, was = which === "s" ? a.s : a.e;
     r.append(el("span", "lbl", which === "s" ? "Start" : "End"), elh("span", null, "<span class='time-big" + (val !== was ? " changed" : "") + "'>" + hm(val) + "</span>" + (val !== was ? " <span class='was'>was " + hmShort(was) + "</span>" : "")));
     var br = el("div", "btn-row");
@@ -1377,11 +1418,11 @@ function rsControls(a, list) {
   }
   box.append(row("s"), row("e"));
   // Venue: a draft like the times.
-  var vr = el("div", "time-row"), vs = el("select", "sel-box");
+  var vr = el("div", "time-row"), vs = el("select", "sel-box"); vr.setAttribute("data-row", "v");
   settings.venues.forEach(function (v) { vs.append(new Option(v.name || "Untitled venue", v.id)); });
   if (!VENUES[c.v]) vs.append(new Option(c.v + " (removed)", c.v));
   vs.value = c.v; vs.setAttribute("aria-label", "Venue");
-  vs.addEventListener("change", function () { var k = rsCur(a); RS.drafts[a.id] = { s: k.s, e: k.e, v: vs.value }; if (!rsChanged(a)) delete RS.drafts[a.id]; rsTap([a.id]); });
+  vs.addEventListener("change", function () { var k = rsCur(a); RS.drafts[a.id] = { s: k.s, e: k.e, v: vs.value }; if (!rsChanged(a)) delete RS.drafts[a.id]; rsTap({ ctl: { id: a.id, prev: k } }); });
   var vcell = el("span"); vcell.append(vs);
   if (c.v !== a.v) vcell.append(el("span", "was", "was " + rsVName(a.v)));
   vr.append(el("span", "lbl", "Venue"), vcell); box.append(vr);
@@ -1397,7 +1438,7 @@ function rsControls(a, list) {
     var ns = sp.get(), ne = ep.get();
     if (ns == null || ne == null) { rsToast("Pick a date and time for both start and end."); return; }
     if (ev && rsOutside({ s: ns, e: ne })) { rsToast("Blocked: pick times within the event (" + rsDayName(ev.s) + " " + hmU(ev.s) + " – " + rsDayName(ev.e) + " " + hmU(ev.e) + ")."); return; }
-    rsSetDraft(a, ns, ne);
+    rsSetDraft(a, ns, ne, null, true);
   });
   var g = el("div", "exact-grid"); g.append(l1, l2); wrap.append(g, go); box.append(wrap);
   if (ev && rsOutside(c)) box.append(el("div", "block-box", "⏰ " + rsOutsideText(c) + " (" + hmU(ev.s) + " – " + hmU(ev.e) + "). It can only be moved toward the event hours, not further out."));
@@ -1406,7 +1447,7 @@ function rsControls(a, list) {
   if (rsChanged(a)) {
     var u = el("div", "rs-row");
     var undo = el("button", "btn ghost small", "Undo this change"); undo.type = "button";
-    undo.addEventListener("click", function () { delete RS.drafts[a.id]; rsTap([a.id]); });
+    undo.addEventListener("click", function () { var k = rsCur(a); delete RS.drafts[a.id]; rsTap({ ctl: { id: a.id, prev: k } }); });
     u.append(el("span", "unsaved", "Unsaved change"), undo); box.append(u);
   }
   return box;
@@ -1442,13 +1483,16 @@ function renderTimeline(list) {
     box.style.setProperty("--hour", (step / (t1 - t0)) * 100 + "%"); box.style.backgroundPosition = x(Math.ceil(t0 / step) * step) + "% 0";
     here.forEach(function (a) {
       var st = rsState(a), c = rsCur(a), top = 6 + a.lane * 52 + "px";
-      var b = el("div", "bar s-" + a.style + (rsOutside(c) ? " outside" : "") + (RS.selected === a.id ? " sel" : "") + (st === "done" ? " done" : "") + rsFlashCls(a));
+      var b = el("div", "bar s-" + a.style + (rsOutside(c) ? " outside" : "") + (RS.selected === a.id ? " sel" : "") + (st === "done" ? " done" : ""));
+      b.setAttribute("data-id", a.id);
       b.style.viewTransitionName = "rsb-" + a.id;
       var bs = Math.max(a.s, t0), be = Math.min(a.e, t1);
       if (c.v !== a.v) { bs = Math.max(c.s, t0); be = Math.min(c.e, t1); }
       b.style.left = x(bs) + "%"; b.style.width = "calc(" + Math.max(0.4, x(be) - x(bs)) + "% - 3px)"; b.style.top = top;
+      // The block's width as a share of the row, so the selected stripe can be a third of the block itself.
+      b.style.setProperty("--bw", Math.max(0.4, x(be) - x(bs)));
       var label = "<b>" + esc(a.t) + (c.v !== a.v ? " ↳" : "") + "</b><span class='tag'>" + (st === "live" ? "LIVE · " : st === "done" ? "Finished · " : "") + hmShort(c.s) + "–" + hmShort(c.e) + "</span>";
-      var pickA = function () { RS.selected = a.id; RS.late = null; rsTap(); };
+      var pickA = function () { RS.selected = a.id; RS.late = null; rsTap({ instant: true }); };
       b.addEventListener("click", pickA);
       if (be - bs < 40) { b.classList.add("narrow"); var sl = elh("div", "side-label", label); sl.style.viewTransitionName = "rsl-" + a.id; sl.style.left = "calc(" + x(Math.min(t1, Math.max(a.e, c.e))) + "% + 8px)"; sl.style.top = top; sl.addEventListener("click", pickA); box.append(b, sl); }
       else { b.innerHTML = label; box.append(b); }
@@ -1470,9 +1514,10 @@ function renderTimeline(list) {
     var ol = el("div", "outside-list");
     ol.append(el("span", "out-flag", "⚠ OUTSIDE EVENT HOURS (" + away.length + "): guests still see these. Move them into the event or delete them."));
     away.forEach(function (a) {
-      var c = rsCur(a), it = elh("div", "oi" + (RS.selected === a.id ? " sel" : "") + rsFlashCls(a), "<span><b>" + esc(a.t) + "</b> · " + esc(rsVName(c.v)) + "</span><span class='meta'>" + rsDayName(c.s) + " " + hmShort(c.s) + "–" + hmShort(c.e) + "</span>");
+      var c = rsCur(a), it = elh("div", "oi" + (RS.selected === a.id ? " sel" : ""), "<span><b>" + esc(a.t) + "</b> · " + esc(rsVName(c.v)) + "</span><span class='meta'>" + rsDayName(c.s) + " " + hmShort(c.s) + "–" + hmShort(c.e) + "</span>");
       it.style.viewTransitionName = "rso-" + a.id;
-      it.addEventListener("click", function () { RS.selected = a.id; RS.late = null; rsTap(); });
+      it.setAttribute("data-id", a.id);
+      it.addEventListener("click", function () { RS.selected = a.id; RS.late = null; rsTap({ instant: true }); });
       ol.append(it);
     });
     holder.append(ol);
@@ -1497,13 +1542,13 @@ function renderRsPhone(list) {
   var ev = rsEv(), sortedList = list.slice().sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
   function item(a) {
     var st = rsState(a), c = rsCur(a), over = rsOverlaps(a, list), open = RS.open === a.id;
-    var it = el("div", "pitem" + (open ? " open" : "") + (rsChanged(a) ? " moved" : "") + rsFlashCls(a));
+    var it = el("div", "pitem s-" + a.style + (open ? " open" : "") + (rsChanged(a) ? " moved" : ""));
     it.style.viewTransitionName = "rsp-" + a.id; it.setAttribute("data-rs", a.id);
     var head = elh("div", null, "<b>" + esc(a.t) + "</b><br><span class='t'>" + hmShort(c.s) + " – " + hmShort(c.e) + "</span> <span class='v'>· " + esc(rsVName(c.v)) + "</span>");
     var toggle = function () { RS.open = open ? null : a.id; rsTap(); };
     var sw = el("span", "sw s-" + a.style), tag = el("span", "st " + (st === "live" ? "live" : ""), st === "live" ? "LIVE" : st === "done" ? "✓ Done" : a.type);
-    [sw, head, tag].forEach(function (n) { n.addEventListener("click", toggle); });
-    it.append(sw, head, tag);
+    var ph = el("div", "phead"); ph.append(sw, head, tag); ph.addEventListener("click", toggle);
+    it.append(ph);
     if (ev && rsOutside(c)) it.append(el("span", "out", "⏰ " + rsOutsideText(c)));
     if (over.length) it.append(el("span", "wn", "⚠ Overlaps " + over.map(function (b) { return b.t; }).join(", ") + " (same venue)"));
     if (a.sched && (a.sched.s !== c.s || a.sched.e !== c.e)) it.append(el("span", "sch", "Originally " + hmShort(a.sched.s) + " – " + hmShort(a.sched.e)));
@@ -1526,12 +1571,12 @@ function renderRsPhone(list) {
   if (away.length) { var oh = el("div", "group-h out-h", "⚠ Outside event hours (" + away.length + ")"); pl.append(oh); away.forEach(function (a) { pl.append(item(a)); }); }
 }
 function renderRsSheet(list) {
-  var h = $("rs-sheet"), wasOpen = h.childElementCount > 0; h.replaceChildren();
+  var h = $("rs-sheet"); h.replaceChildren();
   if (!RS.late || innerWidth > 760) return;
-  // Slides up only when it first opens, not on every redraw while it's open.
-  if (!wasOpen) h.classList.add("enter"); else h.classList.remove("enter");
   var dim = el("div", "dim"); dim.addEventListener("click", function () { RS.late = null; rsTap(); });
   var sheet = el("div", "sheet"); renderLate(sheet, list);
+  // Named so the slide can bring it up from the bottom when it opens and take it down when it closes.
+  dim.style.viewTransitionName = "rs-dim"; sheet.style.viewTransitionName = "rs-sheet";
   h.append(dim, sheet);
 }
 
@@ -1565,7 +1610,7 @@ function rsSaveAll(list, newEv) {
     if (newEv) RS.evDraft = null;
     rsToast("Saved " + n + " change" + (n > 1 ? "s" : "") + (newEv ? " and the new event times" : "") + ". Every screen shows it now.");
     renderRunSheet(true);
-  }, function (err) { clearTimeout(slow); st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; st.className = "bar-block"; });
+  }, function (err) { clearTimeout(slow); st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; st.className = "bar-block"; shake(st); });
 }
 function renderRsSaveBar() {
   var list = rsActs(), n = list.filter(rsChanged).length, bar = $("rs-savebar"); bar.replaceChildren();
@@ -1575,6 +1620,7 @@ function renderRsSaveBar() {
   var status = el("span", "unsaved"); status.id = "rs-status";
   if (bad.length && !evOk) {
     status.className = "bar-block";
+    if (!RS.blocked) setTimeout(function () { shake($("rs-status")); }, 0);
     status.textContent = "⏰ Can't save: " + bad.map(function (a) { return a.t; }).join(", ") + " would be outside event hours (" + hmU(ev.s) + " – " + hmU(ev.e) + ").";
     bar.append(status);
     var need = { s: Math.floor(Math.min(ev.s, Math.min.apply(null, bad.map(function (a) { return RS.drafts[a.id].s; }))) / 15) * 15, e: Math.ceil(Math.max(ev.e, Math.max.apply(null, bad.map(function (a) { return RS.drafts[a.id].e; }))) / 15) * 15 };
@@ -1591,9 +1637,10 @@ function renderRsSaveBar() {
     bar.append(save);
   }
   var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.disabled = !n;
-  cancel.addEventListener("click", function () { var was = Object.keys(RS.drafts); RS.drafts = {}; rsTap(was); });
+  cancel.addEventListener("click", function () { var was = Object.keys(RS.drafts); RS.drafts = {}; rsTap({ flash: was }); });
   bar.append(cancel);
   bar.toggleAttribute("data-clean", !n);
+  RS.blocked = !!(bad.length && !evOk);
 }
 
 // The run sheet counts as one edit area for the "unsaved changes" guard.
@@ -1626,26 +1673,37 @@ function renderRunSheet(forceEvent) {
   if (blank) { RS.late = null; $("rs-sheet").replaceChildren(); return; }
   $("rs-now").textContent = "● Now " + hm(rsNow());
   renderTimeline(list); renderRsSide(list); renderRsPhone(list); renderRsSheet(list); renderRsSaveBar();
-  RS.flash = null;
 }
 
-// ---- Motion on taps ----
-// A tap on the run sheet glides to the new layout instead of jumping (the browser's View Transitions feature):
-// each activity is tagged with its id so the browser can follow it, and what just changed glows briefly.
-// Database updates, Save and window resizes still redraw instantly. Browsers without the feature change instantly.
-var rsMotion = { ms: 250 };
-function rsFlashCls(a) { return RS.flash && RS.flash.indexOf(a.id) >= 0 ? " rs-flash" : ""; }
-function rsTap(flashIds, forceEvent) {
-  RS.flash = flashIds && flashIds.length ? flashIds : null;
-  var follow = RS.flash ? RS.flash[0] : null, root = document.documentElement;
-  var draw = function () { renderRunSheet(forceEvent); if (!follow) follow = RS.open; };
-  if (!rsMotion.ms || !document.startViewTransition) { draw(); rsFollow(follow); return; }
-  root.style.setProperty("--rs-motion", rsMotion.ms + "ms");
+// ---- Motion on taps (MOTION-RULES.md) ----
+// Taps that move things slide to the new layout (the browser's View Transitions feature), then what changed glows.
+// Each activity is tagged with its id so the browser can follow it. Repeat-tap buttons and selecting change instantly.
+// Database updates, Save and window resizes redraw instantly. Browsers without the feature change instantly.
+// o: { instant, force, flash: [activity ids whose block or list item glows], ctl: { id, prev } (the editing controls glow) }
+function rsTap(o) {
+  o = o || {};
+  var follow = o.ctl ? o.ctl.id : o.flash && o.flash.length ? o.flash[0] : null, root = document.documentElement;
+  var draw = function () { renderRunSheet(o.force); if (!follow) follow = RS.open; };
+  if (o.instant || !canMove()) { draw(); rsGlow(o); rsFollow(follow); return; }
   root.classList.add("rs-moving");
   var vt = document.startViewTransition(draw);
-  // A quick second tap cancels the first glide (the change itself still happens); that isn't an error.
+  // A quick second tap cancels the first slide (the change itself still happens); that isn't an error.
   vt.ready.catch(function () {});
-  vt.finished.then(function () {}, function () {}).then(function () { root.classList.remove("rs-moving"); rsFollow(follow); });
+  // Slide first, then glow (rule 6).
+  vt.finished.then(function () {}, function () {}).then(function () { root.classList.remove("rs-moving"); rsGlow(o); rsFollow(follow); });
+}
+// The glow appears where you were working (rule 4): the editing controls' changed rows, or the moved blocks and list items.
+function rsGlow(o) {
+  (o.flash || []).forEach(function (id) {
+    document.querySelectorAll('#rs-tl .bar[data-id="' + id + '"], #rs-away .oi[data-id="' + id + '"], #rs-list .pitem[data-rs="' + id + '"]').forEach(glow);
+  });
+  if (o.ctl) {
+    var a = rsByIdIn(rsActs(), o.ctl.id); if (!a) return;
+    var c = rsCur(a), p = o.ctl.prev;
+    [["s", c.s !== p.s], ["e", c.e !== p.e], ["v", c.v !== p.v]].forEach(function (r) {
+      if (r[1]) document.querySelectorAll('[data-ctl="' + a.id + '"] [data-row="' + r[0] + '"]').forEach(glow);
+    });
+  }
 }
 // On a phone, keep the activity being edited in view if the list re-sorted it off screen.
 function rsFollow(id) {

@@ -5,4 +5,3 @@
 .preview-tag { font: 700 11px var(--font-body); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 2px 8px; vertical-align: middle; }
 #demo-when .dtpick { max-width: 460px; }
 #demo-when .sel-box { min-height: 40px; border: 2px solid var(--line); border-radius: 10px; padding: 6px 8px; background: var(--night); color: var(--text); font: 600 15px var(--font-body); color-scheme: dark; width: 100%; box-sizing: border-box; }
-.motion-opts { display: flex; flex-wrap: wrap; gap: 6px 18px; }

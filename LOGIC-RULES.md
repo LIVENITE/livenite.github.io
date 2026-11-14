@@ -402,6 +402,54 @@ The database checks EVT-3 against the event times after the save.
 
 ---
 
+## MOT: motion and feedback
+
+How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets are MOTION-RULES rules.
+
+**MOT-1. Press-in and hover.** [1, 2]
+- Buttons, × buttons, menu links, the Draws menu, home cards, run sheet blocks, phone list items, the outside-hours list, tick boxes, dropdowns and the Running late "By" choices shrink to 95% and darken while pressed (home cards to 97%). Disabled buttons don't.
+- On computers with a mouse: a subtle hover on most things; main (yellow) buttons and run sheet blocks lift 3 px with a light ring. Pressing always wins over hovering.
+
+*Code:* `cards.css`, "Motion and feedback". *Check:* `preview-motion`.
+
+**MOT-2. Selected look.** [3]
+- The selected run sheet block, the selected outside-hours item, the open phone list item's header and the Admin activity row being edited turn white, keeping a stripe of their own card colour across 30% (the Admin row's mini card is its stripe).
+- Cream card looks (Ticket, Diner) use an orange stripe. On the timeline, `--bw` (the block's share of the row) keeps the stripe at 30% of the block.
+
+*Code:* `cards.css`; `renderTimeline()` sets `--bw`. *Check:* `preview-motion`.
+
+**MOT-3. Glow where you were working.** [4]
+- A 1-second yellow glow (`glow()`) shows on what a tap changed, in the place the tap came from:
+  - run sheet editing controls (side panel or phone editor): the Start, End or Venue rows that changed; the timeline block and list item don't glow;
+  - Running late "Add to changes" and the save bar's Cancel: the moved blocks or list items;
+  - game screens: the Start or End time after −5 / +5 / +10, Start now, End now or Set; a newly added winner; newly added prizes.
+- Database updates never glow (except MOT-6).
+
+*Code:* `glow()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
+
+**MOT-4. Slides, and every tap counting.** [5, 6, 7]
+- On the run sheet, these slide for ¼ second (View Transitions), then glow: venue change, Use these times, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
+- These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
+- The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
+- Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
+- No slides in browsers without View Transitions, or with reduce motion on (`canMove()`).
+
+*Code:* `rsTap()`, `panelIn()`, `panelOut()`, `canMove()`. *Check:* `preview-motion` (quick-tap checks on the run sheet and game screen).
+
+**MOT-5. Errors.** [11]
+- Every error message shakes for ¼ second and vibrates on phones that allow it (not iPhones): `bad()` / `setStatus(…, true)`, Event times errors, "Could not save" on the run sheet, the save bar when it first turns to "Can't save", and blocked-change notes.
+- With reduce motion, a red flash instead of the shake.
+
+*Code:* `shake()`. *Check:* `preview-motion`.
+
+**MOT-6. Cards glow as they go LIVE.** [12] On the home page, a card glows once when its activity goes LIVE while the page is open. The 50/50 pot already counts up to a new amount (POT). The run sheet gives no cue for changes from elsewhere.
+
+*Code:* `homeCard()`. *Check:* `preview-motion`.
+
+**MOT-7. Reduce motion.** [10] Nothing slides, shrinks or shakes; glows and the red error flash still show.
+
+*Code:* `reduceMotion`, `cards.css`. *Check:* `preview-motion`.
+
 ## DEMO: demo mode (previews only)
 
 **DEMO-1. Pretend clock.**
@@ -437,3 +485,4 @@ The database checks EVT-3 against the event times after the save.
 - **2026-11-04:** TIME-3 (editor allows 720 minutes), TYPE-1 (one 50/50 enforced by the database), ACC-3 (78 checks). Tests moved into `tests/`, and every *Check* now names a test there. Q1, Q3 and Q6 resolved.
 - **2026-11-05:** EVT-2: the run sheet stays blank until event times are saved (it used to show every activity).
 - **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.
+- **2026-11-14:** New MOT section (MOT-1 to MOT-7) for MOTION-RULES.md: press-in, hover, selected look, glow where you were working, slides only for one-off changes, error shake, cards glowing as they go LIVE. The game screen's time notes now keep their space so buttons don't shift between taps.

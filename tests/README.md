@@ -13,11 +13,12 @@ Automated checks that click through the site in a real browser and test the data
 | `preview-wname.test.mjs` | Draws winner's name and ticket search | browser |
 | `preview-sofar.test.mjs` | "Results so far" / "Results soon" / SEARCH DRAW RESULTS | browser |
 | `preview-guide.test.mjs` | The step guide on Draws and 50/50 game screens | browser |
+| `preview-motion.test.mjs` | MOTION-RULES.md checklist: press-in, hover, selected look, glow where you were working, slides, quick taps all counting, errors shaking, reduce motion, cards glowing as they go LIVE | browser |
 | `database-rules.test.mjs` | Every database rule (who can save what, field limits, event hours, one 50/50) | practice database |
 | `emu-two-phones-offline.test.mjs` | Two phones editing at once, saving offline, reloading mid-edit | browser + practice database |
 | `emu-run-sheet.test.mjs` | Run sheet saves against the real database rules | browser + practice database |
 
-"Browser" tests run against the design preview (built from this branch by `preview-tools/build.py`). "Practice database" means Firebase's local emulator: a copy of Firebase that runs on your own computer, starts empty, and is thrown away afterwards. Nothing touches the live site or its data.
+Most browser tests run with animations switched off, so they check behaviour rather than timing; `preview-motion` turns them on. "Browser" tests run against the design preview (built from this branch by `preview-tools/build.py`). "Practice database" means Firebase's local emulator: a copy of Firebase that runs on your own computer, starts empty, and is thrown away afterwards. Nothing touches the live site or its data.
 
 ## Running them
 

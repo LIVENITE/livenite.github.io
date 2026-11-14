@@ -28,4 +28,6 @@ Demo mode is not published; it stays in previews only (see DECISIONS.md).
 
 - **A Claimed tick can land on the wrong prize in one rare case.** This can happen if one person removes a prize from a Draws list and saves while someone else is ticking Claimed on that same draw. The fix: give each prize a permanent ID instead of using its position in the list.
 - **Firebase free plan.** Move to the pay-as-you-go Blaze plan before any real event, so the site can't shut off for the rest of the month if the free daily limits are hit.
+- **iPhones can't vibrate on errors.** Websites aren't allowed to vibrate iPhones, so iPhone users get the error shake only (MOTION-RULES rule 11).
+- **Taps are ignored during a run sheet slide.** For the ¼ second something slides, taps anywhere on the page don't register. Buttons tapped repeatedly never slide, so this only affects one-off actions (MOTION-RULES rule 5).
 - **Two rules have no automated test yet:** DRAW-7 ("All tickets drawn" ends the draw) and EVT-6 (event times can't strand activities). See LOGIC-RULES.md.

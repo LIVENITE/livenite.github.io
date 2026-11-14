@@ -421,20 +421,21 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .group-h.clickable { cursor: pointer; } .group-h.out-h { color: var(--onair); }
 .group-h.now { color: #ff6b6b; }
 .group-h.now::after { content: ""; flex: 1; height: 2px; background: #ff6b6b; }
-.pitem { border: 2px solid var(--line); border-radius: 14px; background: var(--stage); padding: 10px 12px; display: grid; grid-template-columns: 8px 1fr auto; gap: 4px 10px; align-items: center; }
-.pitem > div, .pitem > span { cursor: pointer; }
+.pitem { border: 2px solid var(--line); border-radius: 14px; background: var(--stage); padding: 6px; display: flex; flex-direction: column; gap: 4px; }
+.pitem .phead { display: grid; grid-template-columns: 8px 1fr auto; gap: 4px 10px; align-items: center; padding: 4px 6px; cursor: pointer; }
+.pitem > span { padding-left: 24px; }
 .pitem .sw { width: 8px; align-self: stretch; border-radius: 4px; background: var(--card-bg); }
 .pitem b { font-size: 16px; }
 .pitem .t { font-family: var(--font-num); font-weight: 700; font-size: 18px; }
 .pitem .v { color: var(--muted); font-size: 13px; }
 .pitem .st { font-size: 12px; font-weight: 700; letter-spacing: 0.06em; }
 .pitem .live { background: var(--bulb); color: var(--ink); border-radius: 999px; padding: 2px 8px; }
-.pitem .wn { grid-column: 2 / -1; color: var(--warn); font-size: 13px; font-weight: 600; }
-.pitem .out { grid-column: 2 / -1; color: var(--onair); font-size: 13px; font-weight: 700; }
-.pitem .mv { grid-column: 2 / -1; color: var(--aqua); font-size: 13px; font-weight: 700; }
+.pitem .wn { color: var(--warn); font-size: 13px; font-weight: 600; }
+.pitem .out { color: var(--onair); font-size: 13px; font-weight: 700; }
+.pitem .mv { color: var(--aqua); font-size: 13px; font-weight: 700; }
 .pitem.open { border-color: var(--bulb); }
 .pitem.moved { border-style: dashed; border-color: var(--aqua); }
-.pitem .edit { grid-column: 1 / -1; display: flex; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; cursor: default; }
+.pitem .edit { display: flex; padding-inline: 6px; flex-direction: column; gap: 10px; border-top: 1px solid var(--line); padding-top: 10px; margin-top: 4px; cursor: default; }
 .runsheet .sheet { position: fixed; left: 0; right: 0; bottom: 0; z-index: 20; background: var(--stage); border-top: 2px solid var(--bulb); border-radius: 18px 18px 0 0; padding: 16px; display: flex; flex-direction: column; gap: 12px; box-shadow: 0 -20px 40px rgb(0 0 0 / 0.5); max-height: 85vh; overflow-y: auto; }
 .runsheet .dim { position: fixed; inset: 0; background: rgb(0 0 0 / 0.5); z-index: 15; }
 .rs-narrow { display: none; }
@@ -446,21 +447,87 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
   .runsheet .save-bar { justify-content: space-between; }
 }
 .runsheet .sched-note { margin: 0; color: var(--muted); font-style: italic; }
-.pitem .sch { grid-column: 2 / -1; color: var(--muted); font-size: 13px; font-style: italic; }
+.pitem .sch { color: var(--muted); font-size: 13px; font-style: italic; }
 .rs-empty { margin: 0; padding: 28px 20px; border: 2px dashed var(--line); border-radius: 18px; text-align: center; color: var(--muted); font-size: 16px; }
 
-/* ---- Run sheet motion on taps (see rsTap in site.js) ---- */
+/* ================= Motion and feedback (MOTION-RULES.md) ================= */
+/* Rule 1: everything tappable presses in. Cards keep their own transition (set above). */
+.btn, .danger, .icon-btn, .nav a, .nav-drop, #draws-menu a, .runsheet .bar, .side-label, .outside-list .oi, .pitem .phead,
+.group-h.clickable, .seg span, .check, select, #fp-close { transition: transform 90ms ease-out, filter 90ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out; }
+.btn:not(:disabled):active, .danger:not(:disabled):active, .icon-btn:active, .nav a:active, .nav-drop:active, #draws-menu a:active,
+.runsheet .bar:active, .side-label:active, .outside-list .oi:active, .pitem .phead:active, .group-h.clickable:active, .seg span:active,
+.check:active, select:active, #fp-close:active { transform: scale(0.95); filter: brightness(0.82); }
+a.card:active { transform: scale(0.97); filter: brightness(0.9); }
+
+/* Rule 2: hover, on computers with a mouse only. Main buttons and run sheet blocks get the strong hover. */
+@media (hover: hover) and (pointer: fine) {
+  .btn.ghost:not(:disabled):hover, .icon-btn:hover, .danger:not(:disabled):hover, .nav-drop:hover, .seg span:hover, select:hover,
+  .outside-list .oi:hover, .group-h.clickable:hover, .side-label:hover, #fp-close:hover { background-color: rgb(255 246 230 / 0.08); box-shadow: 0 4px 14px rgb(0 0 0 / 0.35); }
+  .check:hover { filter: brightness(1.15); }
+  .btn:not(.ghost):not(:disabled):hover, .runsheet .bar:hover { transform: translateY(-3px); box-shadow: 0 0 0 3px var(--text), 0 8px 20px rgb(0 0 0 / 0.5); }
+  /* Pressing still wins over hovering. */
+  .btn:not(:disabled):active, .runsheet .bar:active, .danger:not(:disabled):active, .icon-btn:active, .seg span:active, select:active,
+  .outside-list .oi:active, .group-h.clickable:active, .side-label:active,
+  .btn:not(.ghost):not(:disabled):hover:active { transform: scale(0.95); filter: brightness(0.82); box-shadow: none; }
+}
+
+/* Rule 3: a selected item turns white, keeping a stripe of its own colour across about a third of it. */
+.runsheet .bar { --stripe: var(--card-bg); }
+.runsheet .bar.s-ticket, .runsheet .bar.s-diner, .pitem.s-ticket, .pitem.s-diner { --stripe: var(--onair); }
+/* Padding percentages count from the timeline row, so --bw (the block's share of the row) turns 30% of the block into row terms. */
+.runsheet .bar.sel { background: linear-gradient(to right, var(--stripe) 0 30%, #ffffff 30%); color: var(--ink); border-color: #ffffff; padding-left: calc(var(--bw, 10) * 0.3% + 6px); outline: 0; }
+.outside-list .oi.sel { background: linear-gradient(to right, var(--onair) 0 30%, #ffffff 30%); color: var(--ink); border-color: #ffffff; padding-left: calc(30% + 10px); outline: 0; }
+.outside-list .oi.sel .meta { color: var(--ink); }
+.pitem { --stripe: var(--card-bg); }
+.pitem.open .phead { background: linear-gradient(to right, var(--stripe) 0 30%, #ffffff 30%); color: var(--ink); padding-left: calc(30% + 10px); border-radius: 10px; }
+.pitem.open .phead { grid-template-columns: minmax(0, 1fr) auto; }
+.pitem.open .phead .sw { display: none; }
+.pitem.open .phead .v, .pitem.open .phead .st { color: var(--ink); }
+.act-row.editing { background: #ffffff; color: var(--ink); border-color: #ffffff; }
+.act-row.editing .n span { color: #2b4a4e; }
+.act-row.editing .btn.ghost { color: var(--ink); border-color: var(--ink); }
+
+/* Rule 4: what changed glows yellow for 1 second. */
+.glow { animation: glow 1s ease-out; }
+@keyframes glow { from { box-shadow: 0 0 0 3px var(--bulb), 0 0 24px var(--bulb); } to { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
+.rs-controls .time-row, #gm-start, #gm-end { border-radius: 10px; }
+#gm-start, #gm-end { display: inline-block; padding: 0 6px; margin-left: -6px; }
+/* Game screen time notes keep their space when empty, so the buttons below never shift between taps. */
+.gm-note { min-height: 1.45em; }
+.unseen { visibility: hidden; }
+
+/* Rules 6 and 7: run sheet slides use the browser's View Transitions, ¼ second. */
 :root.rs-moving::view-transition-group(*),
 :root.rs-moving::view-transition-old(*),
-:root.rs-moving::view-transition-new(*) { animation-duration: var(--rs-motion, 250ms); animation-timing-function: ease-in-out; }
-.rs-flash { animation: rs-flash 1.2s ease-out; }
-@keyframes rs-flash { from { box-shadow: 0 0 0 3px var(--bulb), 0 0 24px var(--bulb); } to { box-shadow: 0 0 0 0 transparent, 0 0 0 transparent; } }
-#rs-sheet.enter .sheet { animation: rs-sheet-up var(--rs-motion, 250ms) ease-out; }
-#rs-sheet.enter .dim { animation: rs-fade-in var(--rs-motion, 250ms) ease-out; }
-@keyframes rs-sheet-up { from { transform: translateY(100%); } to { transform: none; } }
-@keyframes rs-fade-in { from { opacity: 0; } to { opacity: 1; } }
+:root.rs-moving::view-transition-new(*) { animation-duration: 250ms; animation-timing-function: ease-in-out; }
+/* The phone Running late panel slides up from the bottom when it opens and back down when it closes. */
+:root.rs-moving::view-transition-new(rs-sheet):only-child { animation: 250ms ease-out both slide-up; }
+:root.rs-moving::view-transition-old(rs-sheet):only-child { animation: 250ms ease-in both slide-down; }
+:root.rs-moving::view-transition-new(rs-dim):only-child { animation: 250ms ease-out both fade-in; }
+:root.rs-moving::view-transition-old(rs-dim):only-child { animation: 250ms ease-in both fade-out; }
+@keyframes slide-up { from { transform: translateY(100%); } }
+@keyframes slide-down { to { transform: translateY(100%); } }
+@keyframes fade-in { from { opacity: 0; } }
+@keyframes fade-out { to { opacity: 0; } }
+/* Other panels (Admin editor, Draws menu, unsaved-changes bar) slide in and out with CSS animations, which never block taps. */
+.panel-in { animation: panel-in 250ms ease-out; }
+.panel-out { animation: panel-out 250ms ease-in both; pointer-events: none; }
+@keyframes panel-in { from { opacity: 0; transform: translateY(-14px); } }
+@keyframes panel-out { to { opacity: 0; transform: translateY(-14px); } }
+.leave-bar.panel-in { animation-name: leave-in; }
+.leave-bar.panel-out { animation-name: leave-out; }
+@keyframes leave-in { from { opacity: 0; transform: translate(-50%, 120%); } }
+@keyframes leave-out { to { opacity: 0; transform: translate(-50%, 120%); } }
+
+/* Rule 11: errors shake for ¼ second (a red flash with reduce motion, below). */
+.shake { animation: shake 250ms ease-in-out; }
+@keyframes shake { 20% { translate: -7px 0; } 45% { translate: 6px 0; } 70% { translate: -4px 0; } 90% { translate: 2px 0; } }
+.err-flash { animation: err-flash 600ms ease-out; }
+@keyframes err-flash { from { background-color: var(--bad); color: var(--ink); } }
+
+/* Rule 10: with reduce motion, nothing slides, shrinks or shakes. Highlights still show. */
 @media (prefers-reduced-motion: reduce) {
-  /* Nothing slides here: a soft fade only. */
-  :root.rs-moving::view-transition-group(*) { animation: none; }
-  #rs-sheet.enter .sheet { animation: rs-fade-in var(--rs-motion, 250ms) ease-out; }
+  .btn:active, .danger:active, .icon-btn:active, .nav a:active, .nav-drop:active, #draws-menu a:active, .runsheet .bar:active, .side-label:active,
+  .outside-list .oi:active, .pitem .phead:active, .group-h.clickable:active, .seg span:active, .check:active, select:active, #fp-close:active, a.card:active { transform: none !important; }
+  .panel-in, .panel-out { animation: none; }
 }
