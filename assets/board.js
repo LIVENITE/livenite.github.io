@@ -21,12 +21,35 @@ function note(text) {
   $("live-note").hidden = !text;
 }
 
+// The pot counts up to a new, higher amount and glows briefly, so people watching notice it went up
+// (MOTION-RULES rule 12). With reduce motion it changes straight away.
+const reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+let potShown = null, potTarget = null, potCounting = false;
+function paintPot(text) {
+  $("amount").textContent = text;
+  $("amount").style.setProperty("--chars", Math.max(text.length, 4));
+}
+function countUp(from, to) {
+  potCounting = true;
+  const el = $("amount"); el.classList.remove("pot-bump"); void el.offsetWidth; el.classList.add("pot-bump");
+  const t0 = performance.now();
+  const step = (t) => {
+    const p = Math.min(1, (t - t0) / 900), e = 1 - Math.pow(1 - p, 3);
+    potShown = Math.round(from + (to - from) * e); paintPot(money(potShown));
+    if (p < 1) requestAnimationFrame(step); else { potShown = to; potCounting = false; }
+  };
+  requestAnimationFrame(step);
+}
+
 function render() {
   const now = Date.now();
   const ok = current && typeof current.amount === "number";
-  const shown = ok ? money(current.amount) : "—";
-  $("amount").textContent = shown;
-  $("amount").style.setProperty("--chars", Math.max(shown.length, 4));
+  if (!ok) { potShown = potTarget = null; paintPot("—"); }
+  else if (potTarget !== current.amount) {
+    const from = potShown; potTarget = current.amount;
+    if (from != null && potTarget > from && !reduceMotion) countUp(from, potTarget);
+    else { potShown = potTarget; paintPot(money(potShown)); }
+  } else if (!potCounting) paintPot(money(potShown));
   $("amount").classList.toggle("empty", !ok);
   $("updated").textContent = ok && current.updatedAt ? "Updated " + clock(current.updatedAt) : "Waiting for the first update";
   $("price").textContent = (current && current.ticketPrice) || "—";

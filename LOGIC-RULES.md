@@ -449,9 +449,9 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 
 *Code:* `shake()`. *Check:* `preview-motion`.
 
-**MOT-6. Cards glow as they go LIVE.** [12] On the home page, a card glows once when its activity goes LIVE while the page is open. The 50/50 pot already counts up to a new amount (POT). The run sheet gives no cue for changes from elsewhere.
+**MOT-6. Cards glow as they go LIVE.** [12] On the home page, a card glows once when its activity goes LIVE while the page is open. The 50/50 pot counts up to a new, higher amount on the main site (POT) and, since Nov 14, on the separate 50/50 board and TV screen (`5050/`, `5050/tv/`), where it also brightens briefly; with reduce motion it changes straight away. Those two pages' header links press in like the main site's. The run sheet gives no cue for changes from elsewhere.
 
-*Code:* `homeCard()`. *Check:* `preview-motion`.
+*Code:* `homeCard()`; `board.js` `countUp()`, `theme.css`. *Check:* `preview-motion` (home cards); the 50/50 board and TV count-up were checked by hand, with no automated test yet.
 
 **MOT-7. Reduce motion.** [10] Nothing slides, shrinks or shakes; glows and the red error flash still show.
 
@@ -496,3 +496,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-14:** RS-1: the Now and Midnight labels moved to a strip above the timeline, so they no longer cover activities.
 - **2026-11-14:** Editing panel reworked from the "Editing panel" mock-up (RS-4, new RS-4a): the exact date and time section folds, "Use these times" is now Apply, "Undo this change" is now Undo beside it, "Unsaved change" sits on the section heading, the hint moved above Start, the info line is white, no "Editing" label, and "Outside event hours." replaces the longer message. RS-8: overlap warnings removed. MOT-3: times glow on the digits; venue changes don't glow.
 - **2026-11-14:** MOT-1, MOT-3, MOT-4 extended to every page: the header, footer, back links, floating 50/50 badge and draw guide press in; Admin's moved menu items and new venues glow; the draw guide's steps slide in.
+- **2026-11-14:** MOT-6: the separate 50/50 board and TV screen count the pot up and brighten it; their header links press in.

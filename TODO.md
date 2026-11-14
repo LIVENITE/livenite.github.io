@@ -30,4 +30,5 @@ Demo mode is not published; it stays in previews only (see DECISIONS.md).
 - **Firebase free plan.** Move to the pay-as-you-go Blaze plan before any real event, so the site can't shut off for the rest of the month if the free daily limits are hit.
 - **iPhones can't vibrate on errors.** Websites aren't allowed to vibrate iPhones, so iPhone users get the error shake only (MOTION-RULES rule 11).
 - **Taps are ignored during a run sheet slide.** For the ¼ second something slides, taps anywhere on the page don't register. Buttons tapped repeatedly never slide, so this only affects one-off actions (MOTION-RULES rule 5).
+- **The 50/50 board and TV screen count-up has no automated test** (MOT-6). It was checked by hand. Those pages aren't part of the design preview.
 - **Two rules have no automated test yet:** DRAW-7 ("All tickets drawn" ends the draw) and EVT-6 (event times can't strand activities). See LOGIC-RULES.md.

@@ -240,3 +240,18 @@ body.tv .marquee-strip { position: relative; height: 12px; }
   .bulbs i, .live-pill::before { animation: none; }
   .act, .float-pot { transition: none; }
 }
+
+/* ================= Motion and feedback (MOTION-RULES.md) ================= */
+/* Rule 1: header links press in. Rule 2: hover on computers with a mouse. */
+.mark, .nav a, .mgr-link { transition: transform 90ms ease-out, filter 90ms ease-out, box-shadow 120ms ease-out, background-color 120ms ease-out; }
+.mark:active, .nav a:active, .mgr-link:active { transform: scale(0.95); filter: brightness(0.82); }
+@media (hover: hover) and (pointer: fine) {
+  .mark:hover { filter: brightness(1.2); }
+  .mgr-link:hover { background-color: rgb(255 246 230 / 0.08); box-shadow: 0 4px 14px rgb(0 0 0 / 0.35); }
+}
+/* Rule 12: the pot brightens as it counts up to a new amount (it already glows, so this adds to that glow). */
+.pot-bump { animation: pot-bump 1s ease-out; }
+@keyframes pot-bump { from { filter: brightness(1.5) drop-shadow(0 0 24px var(--bulb)); } }
+@media (prefers-reduced-motion: reduce) {
+  .mark:active, .nav a:active, .mgr-link:active { transform: none; }
+}
