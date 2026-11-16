@@ -148,6 +148,7 @@
 
 <main class="wrap admin" id="view-admin" hidden>
   <a class="back" href="#">&larr; Back to tonight</a>
+  <div class="signed-in" id="signed-in" hidden><span>Logged in as <b id="who"></b></span><button type="button" class="btn ghost" id="logout">Log out</button><span class="status" id="a-status" role="status"></span></div>
   <div>
     <p class="eyebrow">Admin</p>
     <nav class="admin-tabs" aria-label="Admin pages"><a href="#admin" aria-current="page">Settings</a><a href="#runsheet" id="rs-open">Run sheet</a></nav>
@@ -168,7 +169,6 @@
   </section>
 
   <div id="admin-app" hidden style="display:contents">
-  <div class="signed-in"><span>Logged in as <b id="who"></b></span><button type="button" class="btn ghost" id="logout">Log out</button><span class="status" id="a-status" role="status"></span></div>
 
   <section class="panel" id="t-box" aria-labelledby="t-title">
     <h3 id="t-title">Title section</h3>
@@ -244,6 +244,7 @@
 <!-- Run sheet: the whole night for admins (timeline on laptops, list on phones) -->
 <main class="wrap runsheet" id="view-runsheet" hidden>
   <a class="back" href="#">&larr; Back to tonight</a>
+  <div class="signed-in"><span>Logged in as <b id="rs-who"></b></span><button type="button" class="btn ghost" id="rs-logout">Log out</button></div>
   <div>
     <p class="eyebrow">Admin</p>
     <nav class="admin-tabs" aria-label="Admin pages"><a href="#admin" id="rs-settings">Settings</a><a href="#runsheet" aria-current="page">Run sheet</a></nav>

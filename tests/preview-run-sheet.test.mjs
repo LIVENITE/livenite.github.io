@@ -9,8 +9,11 @@ await p.clock.install({ time: new Date("2026-10-29T21:20:00-04:00") });
 const t = (s) => p.textContent(s);
 await p.goto(f + "#admin", { waitUntil: "load" }); await p.waitForTimeout(800);
 ck(await p.isVisible("#rs-open") && (await p.textContent("#view-admin .admin-tabs")) === "SettingsRun sheet", "Admin has Settings | Run sheet tabs");
+const aboveTabs = (v) => p.evaluate((id) => { const s = document.querySelector(id + " .signed-in"), t = document.querySelector(id + " .admin-tabs"); return !!s && s.offsetParent !== null && s.textContent.includes("Logged in as") && s.getBoundingClientRect().bottom <= t.getBoundingClientRect().top; }, v);
+ck(await aboveTabs("#view-admin"), "Settings: \"Logged in as … Log out\" sits above the tabs");
 await p.click("#rs-open"); await p.waitForTimeout(500);
 ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "", "run sheet opens; event times not set yet");
+ck(await aboveTabs("#view-runsheet"), "Run sheet: \"Logged in as … Log out\" sits above the tabs too");
 ck((await t("#ev-status")).startsWith("Not set yet"), "asks for event times");
 ck(await p.isVisible("#rs-empty") && !(await p.isVisible("#rs-tl-panel")) && !(await p.isVisible("#rs-toolbar")) && !(await p.isVisible("#rs-savebar")), "run sheet is blank until event times are set");
 // EVT-1: Apply refuses times that can never work, on the spot, and stages nothing.

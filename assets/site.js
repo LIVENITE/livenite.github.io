@@ -2019,6 +2019,7 @@ function route(scroll) {
   $("admin-login").hidden = !(showAdmin && authKnown && !user);
   $("admin-denied").hidden = !(showAdmin && user && !isAdmin);
   $("admin-app").hidden = !(showAdmin && isAdmin);
+  $("signed-in").hidden = $("admin-app").hidden; // "Logged in as … Log out" sits above the tabs on both Admin pages
   var changedView = next !== view;
   view = next;
   if (a) renderDetail(a);
@@ -2121,7 +2122,7 @@ if (!configured) {
   onAuthStateChanged(auth, function (u) {
     user = u; isAdmin = false; authKnown = true;
     if (!u) { route(false); return; }
-    $("who").textContent = u.email || "";
+    $("who").textContent = $("rs-who").textContent = u.email || "";
     $("denied-email").textContent = u.email || "";
     getDoc(doc(db, "managers", u.uid)).then(function (me) { isAdmin = me.exists(); route(false); }, function () {
       bad("login-status", "Could not check your access. Try again.");
@@ -2136,7 +2137,9 @@ if (!configured) {
       $("l-password").value = ""; ok("login-status", "");
     }, function (err) { bad("login-status", loginError(err)); }).then(function () { $("login-btn").disabled = false; });
   });
-  ["logout", "denied-logout"].forEach(function (id) { $(id).addEventListener("click", function () { closeEditor(); signOut(auth); }); });
+  // Logging out with unsaved changes asks first, like leaving the page (DATA-RULES rule 4).
+  var doLogout = function () { closeEditor(); signOut(auth); };
+  ["logout", "denied-logout", "rs-logout"].forEach(function (id) { $(id).addEventListener("click", function () { if (dirtyAreas().length) askLeave(doLogout); else doLogout(); }); });
   connect();
   document.addEventListener("visibilitychange", function () { if (document.hidden) disconnect(); else connect(); });
 }
