@@ -87,10 +87,18 @@ ck(await vt(p) > n0 && await has(p, bar("MeBxoJbmr1iSLrR9Qeyd"), "glow"), "Runni
 await p.screenshot({ path: SHOTS + "/motion-laptop.png" });
 // Taps keep working while things slide: Save all pressed straight after Apply (mid-slide) saves.
 await p.locator('#rs-away .oi', { hasText: "STRONG" }).click(); await p.waitForTimeout(200);
+await p.evaluate(() => window.__slidNames = []);
+await p.evaluate(() => document.addEventListener("transitionrun", (e) => { if (e.propertyName === "transform" && e.target.style.transition.includes("250ms")) window.__slidNames.push(e.target.textContent); }, true));
+await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
 await p.locator("#rs-side .exact button", { hasText: "Apply" }).click({ noWaitAfter: true });
 await p.waitForTimeout(40);
-await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click({ force: true }); await p.waitForTimeout(400);
+// A real click at the button's spot, with the page scrolled to the bottom, so anything covering the bar would catch it.
+await p.evaluate(() => window.scrollTo(0, document.documentElement.scrollHeight));
+const svb = await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).boundingBox();
+ck(await p.evaluate(([x, y]) => document.elementFromPoint(x, y)?.textContent.trim() === "Save all", [svb.x + 20, svb.y + 15]), "nothing covers Save all at the bottom of the page (the footer used to)");
+await p.mouse.click(svb.x + 20, svb.y + 15); await p.waitForTimeout(400);
 ck((await p.textContent("#rs-savebar")).includes("No unsaved") && await p.locator('#rs-away .oi', { hasText: "STRONG" }).count() === 0, "Save all straight after Apply (while sliding) saves");
+ck(!(await p.evaluate(() => window.__slidNames.some((t) => /Penny|PLINKO|Check-in/.test(t)))), "only items that really moved slid (a page scroll doesn't make everything slide)");
 // Rule 11: a blocked change shakes its message.
 await p.locator(bar("MeBxoJbmr1iSLrR9Qeyd")).click();
 ck(!(await p.isVisible("#rs-side .exact-grid")) && (await p.textContent("#rs-side .exact-head")).startsWith("▸"), "the exact date and time section starts folded");

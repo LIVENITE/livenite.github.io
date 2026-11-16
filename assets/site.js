@@ -1435,7 +1435,8 @@ function rsControls(a, list) {
   // Exact date and time: must land fully inside the event. The section folds; it starts open only for an activity
   // outside event hours, where picking a time inside the event is the fix. Its open/closed state is kept per activity.
   var s0 = rsSuggestedStart(a), len = c.e - c.s, wrap = el("div", "exact");
-  var open = RS.exactOpen[a.id] != null ? RS.exactOpen[a.id] : !!(ev && rsOutside(c));
+  if (RS.exactOpen[a.id] == null) RS.exactOpen[a.id] = !!(ev && rsOutside(c));
+  var open = RS.exactOpen[a.id];
   var headRow = el("div", "exact-headrow");
   var head = el("button", "exact-head", (open ? "▾ " : "▸ ") + (ev && rsOutside(c) ? "Set the date and time (suggested to fit the event)" : "Or set an exact date and time"));
   head.type = "button"; head.setAttribute("aria-expanded", String(open));
@@ -1707,6 +1708,11 @@ function rsKeyed() {
   });
   return out;
 }
+// Where an item sits inside its own list (timeline, outside-hours list or phone list), not on the screen.
+function rsPlace(n) {
+  var box = n.closest("#rs-tl, #rs-away, #rs-list"), r = n.getBoundingClientRect(), c = box ? box.getBoundingClientRect() : { left: 0, top: 0 };
+  return { left: r.left - c.left, top: r.top - c.top };
+}
 function rsTap(o) {
   o = o || {};
   var follow = o.ctl ? o.ctl.id : o.flash && o.flash.length ? o.flash[0] : null;
@@ -1714,7 +1720,7 @@ function rsTap(o) {
   if (o.instant || !canMove()) { draw(); rsGlow(o); rsFollow(follow); return; }
   // First: where everything is now, and whether the Running late panel and phone editors are open.
   var before = {}, was = rsKeyed();
-  Object.keys(was).forEach(function (k) { before[k] = was[k].getBoundingClientRect(); });
+  Object.keys(was).forEach(function (k) { before[k] = rsPlace(was[k]); });
   var oldSheet = $("rs-sheet").querySelector(".sheet"), openBefore = document.querySelector("#rs-list .pitem.open");
   RS.sheetOpening = !oldSheet;
   var sheetGhost = oldSheet ? $("rs-sheet").cloneNode(true) : null;
@@ -1723,7 +1729,7 @@ function rsTap(o) {
   // Last, invert, play: each item starts where it was and slides to where it is now.
   var now = rsKeyed();
   Object.keys(now).forEach(function (k) {
-    var n = now[k], r = n.getBoundingClientRect(), b = before[k];
+    var n = now[k], r = rsPlace(n), b = before[k];
     if (!b) { if (Object.keys(before).length) replayClass(n, "panel-in"); return; }
     var dx = b.left - r.left, dy = b.top - r.top;
     if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;

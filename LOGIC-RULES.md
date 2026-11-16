@@ -350,7 +350,7 @@ Those with no overlap are listed under "Outside event hours". Those partly outsi
 *Code:* `rsControls()`, `rsSetDraft()`.
 
 **RS-4. Exact pickers.**
-- In the editing controls, the section "Or set an exact date and time" folds. It starts folded, except for an activity outside event hours ("Set the date and time (suggested to fit the event)"), where it starts open. Its open or closed state is kept per activity while the run sheet is open.
+- In the editing controls, the section "Or set an exact date and time" folds. It starts folded, except for an activity outside event hours ("Set the date and time (suggested to fit the event)"), where it starts open. Once shown, its open or closed state is kept per activity while the run sheet is open, so it doesn't fold itself away when Apply brings the activity inside the event.
 - Inside the section: the Starts and Ends pickers, then **Apply** (stages the picked times) and **Undo** (only when the activity has an unsaved change; drops its draft). "Unsaved change" shows on the section's heading line, so it's visible when folded.
 - A date box plus hour, minute (5-minute steps; an existing off-step minute is kept) and AM/PM dropdowns.
 - Dates are limited to the event's dates.
@@ -444,9 +444,10 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 *Code:* `glow()`, `glowText()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
 
 **MOT-4. Slides, and every tap counting.** [5, 6, 7]
-- On the run sheet, these slide for ¼ second, then glow. The slide moves the real blocks and list items from their old place to their new one (matched by activity id), so taps keep working mid-slide: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
+- On the run sheet, these slide for ¼ second, then glow. The slide moves the real blocks and list items from their old place to their new one (matched by activity id), so taps keep working mid-slide. Positions are measured inside each list, so a page scroll doesn't make everything slide: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
 - These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
 - The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out, and the draw guide's steps slide in when it's unfolded, with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
+- The run sheet sits above the footer, so its fixed Save all bar is never covered (the footer used to cover it when the page was scrolled to the bottom).
 - Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
 - No slides with reduce motion on (`canMove()`). Nothing uses View Transitions, which block taps while they play.
 
@@ -508,3 +509,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-14:** MOT-6: the separate 50/50 board and TV screen count the pot up and brighten it; their header links press in.
 - **2026-11-16:** EVT-2, new EVT-2a, EVT-3, EVT-5, EVT-6: event times use Apply (refusing impossible times on the spot), then Save all with the run sheet's changes; moves and outside-hours flags follow the applied times; stranding is refused at Save all instead of when setting the times. The generic Apply / Save all rule is in DATA-RULES.md rule 4.
 - **2026-11-16:** MOT-4: run sheet slides now move the real items instead of using View Transitions, which ignored taps for ¼ second (a Save all pressed straight after Apply was lost).
+- **2026-11-16:** Fixed: after Apply on an outside-hours activity, the footer covered Save all and every block slid. RS-4 (the section stays open), MOT-4 (positions measured inside each list; the save bar above the footer).
