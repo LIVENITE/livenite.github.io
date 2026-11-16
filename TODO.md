@@ -8,6 +8,8 @@
 
 - **Game manager logins.** Each game manager gets their own email login and can only update the games an admin assigns to them (end time, winners, ticket lists). Today only admins (the `managers` list) can log in and run every game screen.
 
+- **Rework the Admin "Navigation bar" section (to discuss).** It needs design work. Today it has the logo text and a list of menu items to rename, show or hide, and move up or down (with Draws links added automatically). Details to agree when we pick it up.
+
 - **Rehearsal mode for new users and admins (to discuss).** A way to practise running the night on the live site, separate from demo mode. Demo mode stays as it is: preview only, with its current scope (a pretend clock for looking around). To talk through first:
   - What a rehearsal covers: practising game screens and the run sheet, training new admins and game managers.
   - Keeping real data safe: a pretend clock must never save real times (Start now, End now, Running late, "All tickets drawn" all use "now"). Options include a look-only rehearsal, a separate practice copy of the data, or loading the live line-up into a preview.
