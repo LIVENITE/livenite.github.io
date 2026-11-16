@@ -369,6 +369,7 @@ body:has(#view-admin:not([hidden])) .leave-bar, body:has(#view-gm:not([hidden]))
 .runsheet .bar b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .runsheet .bar .tag { font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }
 .runsheet .bar.outside { box-shadow: inset 0 0 0 2px var(--onair); }
+.section-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .act-row .staged-note { display: block; margin-top: 6px; font-size: 13px; }
 .act-row.deleting .mini, .act-row.deleting .n b { opacity: 0.55; text-decoration: line-through; }
 .runsheet .bar.sel { outline: 3px solid #fff; outline-offset: 2px; }

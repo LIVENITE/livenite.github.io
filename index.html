@@ -201,7 +201,7 @@
   <section class="panel" aria-labelledby="acts-title">
     <div class="section-head">
       <h3 id="acts-title">Activities</h3>
-      <button type="button" class="btn" id="m-add">Add activity</button>
+      <div class="section-actions"><button type="button" class="btn" id="m-add">Add activity</button><button type="button" class="danger" id="m-clear" style="margin:0" hidden>Clear all</button></div>
     </div>
     <p class="preview-note" style="padding:0">Each mini card shows the activity's look and graphic. <b>Suggested</b> picks an icon from the name (bingo → bingo ball, karaoke → microphone), otherwise from the type. <b>Auto pattern</b> cycles the patterns down the line-up.</p>
     <div class="status" id="m-done" role="status"></div>
@@ -236,7 +236,6 @@
     <ul class="act-rows" id="m-list"></ul>
     <div class="mgr-tools" style="display:flex;gap:10px;flex-wrap:wrap">
       <button type="button" class="btn ghost" id="m-sample">Load sample night</button>
-      <button type="button" class="danger" id="m-clear" style="margin:0" hidden>Clear all</button>
     </div>
   </section>
   <div class="save-bar page-bar" id="admin-savebar" role="region" aria-label="Save all changes on this screen"></div>
