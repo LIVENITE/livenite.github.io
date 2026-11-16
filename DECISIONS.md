@@ -33,6 +33,7 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Demo mode lets an admin pretend it's a different time, to see the night as guests would.
 - Why: on the live site, an admin who left it on could save real activity times based on a pretend clock.
 - How it's kept out: demo mode lives in a separate preview-only add-on that's attached only when a preview page is built. The site files that get published contain none of it.
+- Confirmed Nov 16: demo mode stays preview-only, with its current scope. Practising on the live site will be a separate rehearsal mode, still to be designed (see TODO.md).
 
 ---
 

@@ -8,6 +8,11 @@
 
 - **Game manager logins.** Each game manager gets their own email login and can only update the games an admin assigns to them (end time, winners, ticket lists). Today only admins (the `managers` list) can log in and run every game screen.
 
+- **Rehearsal mode for new users and admins (to discuss).** A way to practise running the night on the live site, separate from demo mode. Demo mode stays as it is: preview only, with its current scope (a pretend clock for looking around). To talk through first:
+  - What a rehearsal covers: practising game screens and the run sheet, training new admins and game managers.
+  - Keeping real data safe: a pretend clock must never save real times (Start now, End now, Running late, "All tickets drawn" all use "now"). Options include a look-only rehearsal, a separate practice copy of the data, or loading the live line-up into a preview.
+  - Who can use it, and how to make sure it can't be left on by accident on event night.
+
 ## Later (with the Blaze plan)
 
 - **Server-side check that event times can't strand activities.** The database rules can't scan all activities, so today only the page stops event times being shortened around activities (LOGIC-RULES EVT-6, Q4). A small Firebase Cloud Function could check every change on Firebase's own servers and undo one that strands activities. Cloud Functions need the pay-as-you-go Blaze plan, which is already planned before any real event. Check current pricing when switching.
