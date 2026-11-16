@@ -406,6 +406,12 @@ The database checks EVT-3 against the event times after the save.
 
 ---
 
+## ADMIN: Admin page layout
+
+**ADMIN-1. Panels fold.** Title section, Navigation bar, Demo mode (previews only), Venues and Activities each fold on their heading (▸ / ▾), independently. For a new visitor, Activities starts open and the rest start folded; each browser remembers which were left open (`localStorage` key `livenite-folds`). A folded panel with changes shows "Unsaved changes" on its heading (Demo mode shows "On" when it's on); the save bar also names panels with changes not applied. Unfolding slides the panel's contents in (MOTION-RULES rule 7).
+
+*Code:* `setupFolds()`, `cards.css` (`.panel.foldable`). *Check:* `preview-save-rules`.
+
 ## SAVE: Apply, then Save all (every screen)
 
 **SAVE-1. Boxes apply; the save bar saves.** (`DATA-RULES.md` rule 4, "Screens with one shared Save".)
@@ -539,3 +545,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-16:** MOT-4: run sheet slides now move the real items instead of using View Transitions, which ignored taps for ¼ second (a Save all pressed straight after Apply was lost).
 - **2026-11-16:** Fixed: after Apply on an outside-hours activity, the footer covered Save all and every block slid. RS-4 (the section stays open), MOT-4 (positions measured inside each list; the save bar above the footer).
 - **2026-11-17:** New SAVE section (SAVE-1 to SAVE-4): Apply, then Save all on Admin and the game screens, matching the run sheet. GAME-4, GAME-5 and DRAW-5 now save through it.
+- **2026-11-17:** New ADMIN-1: Admin panels fold, remembered per browser.

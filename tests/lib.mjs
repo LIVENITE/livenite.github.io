@@ -20,11 +20,15 @@ export async function launch(extraArgs = [], { motion = false } = {}) {
   const args = [...extraArgs];
   if (process.env.HTTPS_PROXY) args.push("--proxy-server=" + process.env.HTTPS_PROXY, "--proxy-bypass-list=127.0.0.1;localhost");
   const browser = await chromium.launch({ executablePath: CHROME, args });
-  if (!motion) {
-    const newContext = browser.newContext.bind(browser);
-    browser.newContext = (opts = {}) => newContext({ reducedMotion: "reduce", ...opts });
-    browser.newPage = async (opts) => (await browser.newContext(opts)).newPage();
-  }
+  // Admin panels start folded for a new visitor; tests open them all unless they pass { folds: "default" }.
+  const newContext = browser.newContext.bind(browser);
+  browser.newContext = async (opts = {}) => {
+    const { folds, ...rest } = opts;
+    const ctx = await newContext(motion ? rest : { reducedMotion: "reduce", ...rest });
+    if (folds !== "default") await ctx.addInitScript(() => { try { if (!localStorage.getItem("livenite-folds")) localStorage.setItem("livenite-folds", JSON.stringify({ "t-box": true, "n-box": true, "demo-box": true, "v-box": true, "acts-box": true })); } catch (e) {} });
+    return ctx;
+  };
+  browser.newPage = async (opts) => (await browser.newContext(opts)).newPage();
   return browser;
 }
 

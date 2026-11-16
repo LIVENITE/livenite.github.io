@@ -707,6 +707,30 @@ PAGES.push({
       .then(function () { return "Saved " + n + " change" + (n > 1 ? "s" : "") + ". Every screen shows it now."; });
   }
 });
+// ---- Admin panels fold ----
+// Each Admin panel folds on its heading. Activities starts open and the rest start folded; each browser remembers
+// what was left open. A folded panel with changes says so on its heading (the save bar also names it).
+var FOLD_KEY = "livenite-folds";
+function foldState() { try { return JSON.parse(localStorage.getItem(FOLD_KEY) || "{}"); } catch (e) { return {}; } }
+function setupFolds() {
+  var saved = foldState();
+  ["t-box", "n-box", "demo-box", "v-box", "acts-box"].forEach(function (id) {
+    var box = $(id); if (!box || box.classList.contains("foldable")) return;
+    var h = box.querySelector("h3"), head = h.closest(".section-head") || h;
+    box.classList.add("foldable"); head.classList.add("fold-head");
+    h.setAttribute("role", "button"); h.tabIndex = 0;
+    var open = saved[id] != null ? saved[id] : id === "acts-box";
+    var set = function (o, animate) {
+      box.classList.toggle("folded", !o); h.setAttribute("aria-expanded", String(o));
+      if (o && animate && canMove()) [].forEach.call(box.children, function (c) { if (c !== head) replayClass(c, "panel-in"); });
+    };
+    var toggle = function () { var o = box.classList.contains("folded"); set(o, true); var st = foldState(); st[id] = o; try { localStorage.setItem(FOLD_KEY, JSON.stringify(st)); } catch (e) {} };
+    h.addEventListener("click", toggle);
+    h.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggle(); } });
+    set(open, false);
+  });
+}
+setupFolds();
 function renderAdmin() { fillTitleInputs(); renderNavRows(); renderVenueRows(); renderActList(); }
 
 // ---------- Admin: activities editor ----------
@@ -790,6 +814,7 @@ function renderActList() {
     li.append(mini, n, btns); list.append(li);
   });
   if (!rows.length) list.append(el("li", "meta", "No activities yet. Add one, or load the sample night to try things out."));
+  $("acts-box").classList.toggle("dirty", Object.keys(actStage).length > 0 || (!!editorShown && editorArea.dirty()));
   $("m-clear").hidden = !acts.length;
 }
 // The editor's current values, compared with what it opened with to tell whether anything changed.

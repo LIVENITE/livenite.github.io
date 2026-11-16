@@ -154,6 +154,11 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Admins only.
 - Activities are chosen by clicking or tapping, not dragged, because dragging is error-prone on phones.
 
+**Admin panels fold** (Nov 17, 2026)
+- Title section, Navigation bar, Demo mode, Venues and Activities each fold on their heading, independently (not an accordion, so Activities can stay open while another panel is open too).
+- Activities starts open and the rest folded, because Activities is used most. Each browser remembers which panels were left open.
+- A folded panel with changes says "Unsaved changes" on its heading, so nothing is hidden by folding.
+
 **Apply, then Save all on every screen** (Nov 17, 2026)
 - Admin and the game screens now work like the run sheet: each box has Apply and Undo, and a save bar at the bottom has Save all and Cancel.
 - On Admin, Save all saves the title section, navigation bar, venues and all applied activity changes (including new and deleted activities) in one step. Deleting an activity takes two taps, then waits for Save all.
