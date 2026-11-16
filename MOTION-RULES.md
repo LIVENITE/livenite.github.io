@@ -79,6 +79,8 @@ When a tap moves something to a new place (a list re-sorts, an item moves to a n
 - Exception: if the tap came from a repeat-tap button (rule 5), it jumps instantly and gets the highlight.
 - If the thing being edited would move off screen, the page scrolls to keep it in view.
 - **Only what the tap changed may move.** Everything else on the screen stays perfectly still: no flicker, no resizing, no redrawing. If a tap changes one panel, the panels around it don't react.
+- **The page doesn't reshape itself around you.** Sections don't open, close or fold on their own as a side effect of a tap, so the page doesn't suddenly get shorter or jump.
+- **A page scroll is never movement.** Animations measure where things sit within the page, not on the screen, so scrolling never makes things slide.
 
 ## 7. Panels and editors slide in and out
 
@@ -138,12 +140,13 @@ Every screen people tap or click must pass all of these:
 5. Make a change. Only what changed is highlighted, for about 1 second.
 6. Move something. It slides to its new place, then highlights. If it would end up off screen, the page follows it.
 7. Make a change, and watch the rest of the screen. Nothing outside the changed area moves, flickers or changes size.
-8. Open and close each panel or editor. It slides in and out, and doesn't slide again while you work inside it.
-9. Time every movement. Nothing lasts longer than ¼ second, apart from the 1-second highlight.
-10. Turn on reduce motion and repeat 1 to 9. Nothing slides, shrinks or shakes; highlights still show; errors flash red.
-11. Trigger each error. It shakes (or flashes red with reduce motion), and on an Android phone it vibrates.
-12. Have a change arrive from elsewhere while someone is mid-edit. It doesn't move or redraw what they're working on.
-13. If the project has a behaviour reference document, it's updated in the same change.
+8. Repeat the actions with the page scrolled to the very bottom, on laptop and phone. Nothing jumps, only what changed slides, and every button and bar can still be pressed (nothing covers it).
+9. Open and close each panel or editor. It slides in and out, and doesn't slide again while you work inside it.
+10. Time every movement. Nothing lasts longer than ¼ second, apart from the 1-second highlight.
+11. Turn on reduce motion and repeat 1 to 10. Nothing slides, shrinks or shakes; highlights still show; errors flash red.
+12. Trigger each error. It shakes (or flashes red with reduce motion), and on an Android phone it vibrates.
+13. Have a change arrive from elsewhere while someone is mid-edit. It doesn't move or redraw what they're working on.
+14. If the project has a behaviour reference document, it's updated in the same change.
 
 Where possible, these checks are automated tests kept with the project, so anyone can rerun them.
 
@@ -176,3 +179,4 @@ Fill this in for each project. AI assistants: ask about anything left blank befo
 - *Nov 13, 2026:* first version, from questions answered and the "Motion options" mock-up.
 - *Nov 14, 2026:* rule 4: a changed value glows on its text, not its whole row; a dropdown you just changed doesn't glow.
 - *Nov 16, 2026:* rule 5: no animation may block a tap; slides move the real items instead of using page-picture effects (which ignored taps, so Save all straight after Apply was lost).
+- *Nov 16, 2026:* rule 6: the page doesn't reshape itself around you, and a page scroll is never movement; checklist item 8: repeat at the bottom of the page. Learnt when Apply folded a section, the page scrolled, every block slid and the footer covered Save all.

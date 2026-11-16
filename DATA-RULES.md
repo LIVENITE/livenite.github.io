@@ -48,6 +48,10 @@ Each save shows **Saving…**, then **Saved** or **Could not save** with the rea
 - The edit area shows "Unsaved changes", and its Save button is highlighted.
 - Leaving the page, or opening a different edit area, asks first: "You have unsaved changes. Leave without saving?"
 
+**Save buttons can always be pressed.**
+- Save bars and buttons pinned to the edge of the screen are never covered by anything else (a footer, a banner, another bar), at any scroll position, on laptop and phone.
+- Saving or applying never hides or moves the Save button out from under the person about to press it.
+
 **Screens with one shared Save: Apply, then Save all.**
 Some screens have several edit boxes whose changes belong together (for example, a schedule and the hours it must fit in). Instead of a Save in each box, they share one save bar at the bottom of the page.
 - Each box has **Apply**. Apply puts the box's changes into the page's draft: the screen shows the result straight away, but nothing is saved. Apply never saves.
@@ -102,9 +106,10 @@ Every edit area must pass all of these:
 7. Delete something still in use. It's blocked, with the reason shown.
 8. "Task done" ticks save instantly. Everything else waits for Save.
 9. Stage a change that breaks a rule (rule 8). It warns while staging, Save refuses it, and the offered fix saves both records together. Try it from both sides, for example by moving the activity and by changing the event times.
-10. On Apply / Save all screens: Apply never saves; Apply refuses impossible values and stages nothing; Save all saves everything applied in one step; Cancel in the save bar drops it all; leaving with applied or unapplied changes asks first.
-11. LOGIC-RULES.md is updated in the same change: any rule whose behaviour changed is rewritten (same ID), new rules get new IDs, and the Change history has a line.
+10. Scroll to the very bottom of the page, on laptop and phone, then press Save (or Save all). It works: nothing covers it, and nothing on the page jumps when you press it.
+11. On Apply / Save all screens: Apply never saves; Apply refuses impossible values and stages nothing; Save all saves everything applied in one step; Cancel in the save bar drops it all; leaving with applied or unapplied changes asks first.
+12. LOGIC-RULES.md is updated in the same change: any rule whose behaviour changed is rewritten (same ID), new rules get new IDs, and the Change history has a line.
 
 ---
 
-*Last updated 2026-11-16: rule 4, screens with one shared Save (Apply, then Save all), and checklist item 10. 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*
+*Last updated 2026-11-16: rule 4, save buttons can always be pressed, and checklist item 10 (press Save at the bottom of the page), after the footer covered the run sheet's Save all. Also 2026-11-16: rule 4, screens with one shared Save (Apply, then Save all), and checklist item 11. 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*
