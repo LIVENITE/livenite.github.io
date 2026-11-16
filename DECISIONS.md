@@ -154,6 +154,10 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Admins only.
 - Activities are chosen by clicking or tapping, not dragged, because dragging is error-prone on phones.
 
+**The run sheet stays its own page, with Settings | Run sheet tabs** (Nov 17, 2026)
+- Why its own page: it needs the full width, it's the tool kept open all night, and the activity editor and the run sheet both change times and venues, so keeping them apart means one activity is never being changed in two places at once.
+- Tabs at the top of both pages make switching one tap each way. Switching with unsaved changes asks first.
+
 **Admin panels fold** (Nov 17, 2026)
 - Title section, Navigation bar, Demo mode, Venues and Activities each fold on their heading, independently (not an accordion, so Activities can stay open while another panel is open too).
 - Activities starts open and the rest folded, because Activities is used most. Each browser remembers which panels were left open.

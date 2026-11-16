@@ -8,7 +8,7 @@ const p = await (await b.newContext({ viewport: { width: 1280, height: 1000 }, i
 await p.clock.install({ time: new Date("2026-10-29T21:20:00-04:00") });
 const t = (s) => p.textContent(s);
 await p.goto(f + "#admin", { waitUntil: "load" }); await p.waitForTimeout(800);
-ck(await p.isVisible("#rs-open"), "Admin has an Open the run sheet button");
+ck(await p.isVisible("#rs-open") && (await p.textContent("#view-admin .admin-tabs")) === "SettingsRun sheet", "Admin has Settings | Run sheet tabs");
 await p.click("#rs-open"); await p.waitForTimeout(500);
 ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "", "run sheet opens; event times not set yet");
 ck((await t("#ev-status")).startsWith("Not set yet"), "asks for event times");
@@ -67,7 +67,7 @@ ck((await p.locator("#cards a", { hasText: "PLINKO" }).innerText()).toUpperCase(
 await p.goto(f + "#runsheet"); await p.waitForTimeout(300);
 await p.locator("#rs-tl .bar", { hasText: "Buffet" }).click();
 await p.locator("#rs-side .time-row").nth(1).locator("button", { hasText: "+10" }).click();
-await p.click("#view-runsheet a.back"); await p.waitForTimeout(200);
+await p.click("#rs-settings"); await p.waitForTimeout(200);
 ck(await p.isVisible("#leave-bar"), "leaving with unsaved run sheet changes asks first");
 await p.click("#leave-go"); await p.waitForTimeout(400);
 console.log("  after leave:", await p.evaluate(() => location.hash), "admin shown:", await p.isVisible("#view-admin"), "rows:", await p.locator(".act-row").count(), "rs shown:", await p.isVisible("#view-runsheet"));

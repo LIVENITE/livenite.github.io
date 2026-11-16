@@ -383,6 +383,13 @@ body:has(#view-admin:not([hidden])) .leave-bar, body:has(#view-gm:not([hidden]))
 .panel.foldable h3 { transition: transform 90ms ease-out, filter 90ms ease-out; transform-origin: left center; }
 .panel.foldable h3:active { transform: scale(0.97); filter: brightness(0.82); }
 @media (prefers-reduced-motion: reduce) { .panel.foldable h3:active { transform: none; } }
+/* Admin tabs: Settings | Run sheet. */
+.admin-tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 6px; }
+.admin-tabs a { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 2px solid var(--line); color: var(--text); text-decoration: none; font-family: var(--font-marquee); font-size: clamp(18px, 1vw + 12px, 24px); transition: transform 90ms ease-out, filter 90ms ease-out, background-color 120ms ease-out; }
+.admin-tabs a[aria-current="page"] { background: var(--bulb); border-color: var(--bulb); color: var(--ink); }
+.admin-tabs a:active { transform: scale(0.95); filter: brightness(0.82); }
+@media (hover: hover) and (pointer: fine) { .admin-tabs a:not([aria-current]):hover { background-color: rgb(255 246 230 / 0.08); border-color: var(--bulb); } }
+@media (prefers-reduced-motion: reduce) { .admin-tabs a:active { transform: none; } }
 .section-actions { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
 .act-row .staged-note { display: block; margin-top: 6px; font-size: 13px; }
 .act-row.deleting .mini, .act-row.deleting .n b { opacity: 0.55; text-decoration: line-through; }

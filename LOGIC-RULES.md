@@ -412,6 +412,10 @@ The database checks EVT-3 against the event times after the save.
 
 *Code:* `setupFolds()`, `cards.css` (`.panel.foldable`). *Check:* `preview-save-rules`.
 
+**ADMIN-2. Settings | Run sheet tabs.** Both Admin pages start with the same two tabs, Settings (`#admin`) and Run sheet (`#runsheet`), with the current one highlighted; each page also has "← Back to tonight". Switching tabs with unsaved changes (applied or not) asks first, like leaving any page (DATA-RULES rule 4): Stay, or Leave without saving. Changes don't carry over between the two pages, so the same activity is never being changed in two places at once.
+
+*Code:* `index.html` (`.admin-tabs`), the leave guard. *Check:* `preview-run-sheet`.
+
 ## SAVE: Apply, then Save all (every screen)
 
 **SAVE-1. Boxes apply; the save bar saves.** (`DATA-RULES.md` rule 4, "Screens with one shared Save".)
@@ -546,3 +550,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-16:** Fixed: after Apply on an outside-hours activity, the footer covered Save all and every block slid. RS-4 (the section stays open), MOT-4 (positions measured inside each list; the save bar above the footer).
 - **2026-11-17:** New SAVE section (SAVE-1 to SAVE-4): Apply, then Save all on Admin and the game screens, matching the run sheet. GAME-4, GAME-5 and DRAW-5 now save through it.
 - **2026-11-17:** New ADMIN-1: Admin panels fold, remembered per browser.
+- **2026-11-17:** New ADMIN-2: Settings | Run sheet tabs replace "Open the run sheet" and "Back to Admin".

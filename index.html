@@ -150,8 +150,7 @@
   <a class="back" href="#">&larr; Back to tonight</a>
   <div>
     <p class="eyebrow">Admin</p>
-    <h2>Site settings</h2>
-    <a class="btn" href="#runsheet" id="rs-open" style="margin-top:12px">Open the run sheet</a>
+    <nav class="admin-tabs" aria-label="Admin pages"><a href="#admin" aria-current="page">Settings</a><a href="#runsheet" id="rs-open">Run sheet</a></nav>
   </div>
 
   <section class="panel login-box" id="admin-login" hidden aria-labelledby="l-title">
@@ -244,10 +243,10 @@
 
 <!-- Run sheet: the whole night for admins (timeline on laptops, list on phones) -->
 <main class="wrap runsheet" id="view-runsheet" hidden>
-  <a class="back" href="#admin">&larr; Back to Admin</a>
+  <a class="back" href="#">&larr; Back to tonight</a>
   <div>
     <p class="eyebrow">Admin</p>
-    <h2>Run sheet</h2>
+    <nav class="admin-tabs" aria-label="Admin pages"><a href="#admin" id="rs-settings">Settings</a><a href="#runsheet" aria-current="page">Run sheet</a></nav>
   </div>
   <section class="panel ev" id="ev-box" aria-labelledby="ev-title">
     <div class="ev-head"><h3 id="ev-title">Event times</h3><span class="meta" id="ev-summary"></span><span class="ev-status" id="ev-status" role="status"></span></div>
