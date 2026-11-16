@@ -1,0 +1,554 @@
+# LIVENITE logic rules
+
+The precise behaviour of the site, written as rules: what the code does, not what it should do. When the code and this document disagree, that's a bug in one of them; record it under **Open questions** until it's settled.
+
+- **Companion documents:** `DATA-RULES.md` (how screens edit, save and delete), `DECISIONS.md` (what was decided and why).
+- **Scope:** the code on the `design` branch (`assets/site.js`, `firestore.rules`) and the preview-only add-on (`preview-only/`). Where `main` (the live site) differs, it's noted.
+- **Status:** living document. Last reviewed **2026-11-04**.
+
+## How to maintain this document
+
+- **IDs are permanent.** Each rule has an ID (`AREA-n`). Rewording a rule keeps its ID. A removed rule is marked **Retired** with the date, and its ID is never reused. New rules take the next free number in their area.
+- **Same change, same commit.** A change to behaviour isn't finished until its rule is updated here, in the same commit as the code (see `DATA-RULES.md`, rule 9).
+- **Each rule cites its code and its check.** *Code* names the function or rule block. *Check* names the automated test in `tests/` that proves it (for example `preview-run-sheet` is `tests/preview-run-sheet.test.mjs`), or **none** if there isn't one yet. Run them all with `bash tests/run.sh` (see `tests/README.md`).
+- **Disagreements go to Open questions,** never silently resolved.
+- **Record every change in the Change history** at the bottom.
+
+## Conventions
+
+- Times are stored as Firestore timestamps (`start`) plus a whole-minute length (`length`). In the page: `start` is in ms, `len` is in minutes, and `end = start + len × 60 000`.
+- "Now" is the device clock (`Date.now()`). In previews with demo mode on, it's the pretend clock (DEMO-1).
+- Times are shown in the device's time zone. The event runs in Eastern time, so that's Eastern at the event.
+- A **draft** is a change shown on screen but not yet saved (`DATA-RULES.md`, rule 4).
+
+---
+
+## TIME: activity timing
+
+**TIME-1. State.** For an activity *a* at time *now*:
+- `done` if `now ≥ end`
+- `live` if `start ≤ now < end`
+- `upcoming` otherwise
+
+Start is inclusive and end is exclusive.
+*Code:* `stateOf()`. *Check:* `preview-startnow`, `preview-demo` (indirectly).
+
+**TIME-2. Next up.** The *next* activity is the one with the earliest `start > now`, across all types. Every other upcoming activity is *later*.
+*Code:* `nextUp()`, `cardFor()`.
+
+**TIME-3. Length limits.**
+- Everywhere: at most 720 minutes (12 hours).
+- Activity editor minimum: 5 minutes.
+- Game screens, the run sheet and the database minimum: 1 minute (so "End now" can end something a minute after it started).
+*Code:* `m-form` submit, `moveEnd()`, `validActivity()`. *Check:* `database-rules`.
+
+**TIME-4. Original schedule (`schedStart`, `schedLength`).**
+- **Remembered:** the first save that changes an activity's start or length, from a **game screen** (GAME-4), the **run sheet** (RS-7) or "All tickets drawn" (DRAW-7), stores its original start as `schedStart` and its original length as `schedLength`. Later changes leave them alone, so they always hold the first planned slot.
+- **Shown:** game screens show "Scheduled: [start] – [end]" and the run sheet shows "Originally scheduled [start] – [end]" whenever the current times differ from the remembered slot.
+- **Cleared:** saving a new start or length in the **activity editor** deletes both, because editing there is re-planning.
+- **Older records:** some have only `schedLength`, saved before `schedStart` existed. For those, the original start is taken to be the current start.
+
+*Code:* `rememberSchedule()`, `scheduleOf()`, `timeArea.save`, `slotsArea.save`, `rsSaveAll()`, `m-form` submit. *Check:* `preview-startnow` (shown, then cleared by the editor), `preview-run-sheet` (remembered after a push), `database-rules` (field checks).
+
+**TIME-5. Re-evaluation.** Every second the page checks whether any activity's state has changed (TIME-1). If one has, it redraws every screen. Countdowns update every second.
+*Code:* `tick()`, `sig()`.
+
+---
+
+## CARD: what each card shows
+
+**CARD-1. Status line, in order.** The first matching rule wins:
+
+| # | Condition | Shows |
+|---|---|---|
+| 1 | Draws and `live` | blinking **DRAWING NOW** |
+| 2 | Draws and `resultsFinal` | **SEARCH DRAW RESULTS** |
+| 3 | `live`, any other type | blinking **LIVE** (50/50: **DRAWING NOW**), plus " See winners" if it has winners |
+| 4 | Draws, `done`, not final | "Results so far" if any ticket is entered (DRAW-6), else "Results soon" |
+| 5 | Draws, `upcoming` | "Draw at [start]" |
+| 6 | 50/50, not `done` | "Draw in m:ss" (or h:mm:ss), counting down to start |
+| 7 | *next* (TIME-2) | "Starts in N min" / "N h M min" |
+| 8 | `done` | "Finished" |
+| 9 | otherwise (*later*) | "[length] min" |
+
+*Code:* `cardFor()`. *Check:* `preview-sofar` (rows 4 and 2), `preview-demo` (rows 1, 3, 7). Rows 5, 6, 8 and 9 are none.
+
+**CARD-2. Winners on cards.** A card lists its winners ("Winner" / "Winners: a · b") only when the activity is `done` and has at least one winner.
+*Code:* `cardFor()`.
+
+**CARD-3. 50/50 card body.** It shows the pot (`money(pot)`, or "$—" if no pot has been saved), then "Draw at [start] · Tickets [price]" (the price part only if one is set), then the tagline.
+*Code:* `cardFor()`.
+
+**CARD-4. Blinking.**
+- LIVE and DRAWING NOW blink on and off about once a second.
+- On devices set to reduce motion, they instead fade slowly every 2 seconds.
+- Marquee bulbs follow the same pattern: they chase, or fade slowly every 2.4 seconds.
+
+*Code:* `cards.css` (`.pill`, `@media (prefers-reduced-motion)`).
+
+**CARD-5. Graphic.**
+- `graphic = "suggest"`: an icon from the first matching word in the title, otherwise from the type (game → dice, music → microphone, social → cocktail, challenge → trophy, 50/50 and Draws → ticket).
+- `graphic = "auto"`: patterns cycle in line-up order (LINEUP-1).
+- Any other value: that graphic.
+
+*Code:* `suggestFor()`, `graphicOf()`, `renderCards()`.
+
+**CARD-6. Title fit.** The title's font size is capped so its longest word fits the card width, using a per-look letter-width factor.
+*Code:* `cardFor()` (`--fit`, `widths`).
+
+---
+
+## LINEUP: home page order and header
+
+**LINEUP-1. Order.**
+1. live activities, by start;
+2. the first upcoming activity that isn't the 50/50;
+3. the 50/50, if it's upcoming;
+4. the remaining upcoming activities, by start;
+5. finished activities, by start.
+
+*Code:* `renderCards()`.
+
+**LINEUP-2. Tagline.**
+- If the admin set a tagline, show it.
+- Otherwise: "[N] shows. [M] venues. One big night.", where M counts the distinct venues in use.
+- With no activities: "Tonight's line-up is coming soon."
+
+*Code:* `renderChrome()`.
+
+**LINEUP-3. Event times line.** When both event times are set, the home page shows "[Day, Mon D] · [start] – [end]" under the tagline. Otherwise it shows nothing.
+*Code:* `renderChrome()`, `fullWhen()`. *Check:* `preview-run-sheet`, `emu-run-sheet`.
+
+**LINEUP-4. Menu.**
+- Items show in the admin's order, and hidden items are skipped.
+- "50/50" appears only if a 50/50 activity exists, and links to it.
+- "Draws": one link per Draws activity, named after it and in start order. With more than two, they fold into a "Draws ▾" dropdown.
+- The current page's item is highlighted. Any admin screen highlights Admin.
+
+*Code:* `renderChrome()`, `highlight()`.
+
+---
+
+## TYPE: activity types
+
+**TYPE-1. One 50/50.** At most one activity can have type `draw`.
+- **Page:** the editor disables the option when another 50/50 exists, and refuses the save if one is forced.
+- **Database:** the record `site/fiftyFifty` (`{ activityId, updatedAt }`) names the activity that is the 50/50.
+  - Making an activity the 50/50 (creating one, or changing an activity's type to `draw`) must claim that record in the same save.
+  - The claim is refused unless the record names this same activity, or the activity it names is gone or is no longer a 50/50.
+  - Saving an activity that's already the 50/50 needs no claim.
+  - Two admins making a 50/50 at the same moment can't both succeed: there's only one record to claim.
+- **Saves that claim it:** the editor (new 50/50, or a change to 50/50) and Load sample night.
+- If the database refuses a claim, the editor says another activity was just made the 50/50.
+
+*Code:* `otherDraw()`, `openEditor()`, `m-form` submit, `fiftyFiftyOk()` and `validFiftyFifty()` (rules). *Check:* `database-rules` (7 checks), `emu-run-sheet` (sample night claims it).
+
+**TYPE-2. Any number of Draws.** A new Draws starts with 10 empty prizes. Changing an existing activity to Draws gives it 10 if it has none.
+*Code:* `formActivity()`, `m-form` submit.
+
+**TYPE-3. Game screens.** An activity has a game screen if it has a game manager, or is a 50/50 or Draws.
+*Code:* `route()`, `renderActList()`.
+
+---
+
+## DRAW: Draws (prize ticket draws)
+
+**DRAW-1. Prize rows.** Each prize has:
+- `label`: shown as "#n" when blank;
+- `ticket`: up to 12 characters;
+- `name`: optional, up to 60 characters;
+- `claimed`: true or false.
+
+At most 200 prizes.
+*Code:* `slotLabel()`, `renderSlots()`, `validActivity()`.
+
+**DRAW-2. Ticket matching.**
+- Ticket numbers are compared after removing everything except letters and digits, uppercasing, and removing leading zeros (keeping at least one character). So "1388", "001388" and "00-1388" all match.
+- A search hit needs an exact match after this cleanup.
+
+*Code:* `cleanNo()`, `renderTickets()`. *Check:* `preview-wname`.
+
+**DRAW-3. Search messages.**
+- **Hit:** "Ticket [t] is a winner! [label], won by [name]" (the name part only if set, and its trailing full stop removed). Then either ". This prize has been claimed." or ". Collect it at the prize desk."
+- **Miss:** "Ticket [q] isn't on the list" + "." if results are final, else " yet. More tickets are still being drawn."
+
+*Code:* `renderTickets()`.
+
+**DRAW-4. Claimed saves instantly.**
+- Ticking Claimed saves straight away. A transaction reads the latest list and sets only that prize's `claimed`, matched by its position in the saved list.
+- If the save fails, the tick reverts and shows "Not saved ([reason])".
+- A prize that's in the draft but not yet saved can't be ticked.
+
+See Known limit L1.
+*Code:* `saveClaim()`. *Check:* `preview-save-rules`, `emu-two-phones-offline`.
+
+**DRAW-5. Saving the ticket list.**
+- Apply, then Save all (SAVE-1), saves the draft's labels, tickets, names, added and removed rows, and the `resultsFinal` setting, in one transaction.
+- Each row's `claimed` is taken from the latest saved list, never from the draft.
+
+*Code:* `slotsArea.save`.
+
+**DRAW-6. Drawn count.** A prize counts as drawn when its ticket is non-empty after cleanup (DRAW-2).
+*Code:* `drawnCount()`.
+
+**DRAW-7. All tickets drawn.**
+- Saving `resultsFinal = true` while the draw is `live` also ends it: `length = max(1, floor((now − start) / 1 min))`, with the original slot remembered per TIME-4.
+- Unticking and saving sets `resultsFinal = false` but doesn't restart the draw.
+
+*Code:* `slotsArea.save`. *Check:* none yet (an earlier mockup was tested, but that test wasn't carried over).
+
+**DRAW-8. Draw page status box.** Shows Drawing now, Results posted, Results so far, Results soon or "Draw at [start]", following CARD-1's precedence.
+**DRAW-9. Draw page list heading.**
+- "All tickets drawn. N winning tickets."
+- "Results so far: N of M drawn. More may be added." (after the end time)
+- "Drawing in progress: N of M drawn so far."
+- "No tickets drawn yet."
+
+Draws pages have no winners panel.
+*Code:* `renderDetail()`, `renderTickets()`.
+
+**DRAW-10. Guide.** Draws and 50/50 game screens show a step guide. The highlighted step:
+- **Draws:**
+  - `resultsFinal` → "All tickets drawn";
+  - `upcoming` → "Before";
+  - `live` → "Drawing";
+  - `done` → "End time passed".
+- **50/50:**
+  - `upcoming` → "Before";
+  - `live` with no winner → "Drawing";
+  - `live` with a winner → "Winner drawn";
+  - `done` → "After".
+
+*Code:* `renderGuide()`. *Check:* `preview-guide`.
+
+---
+
+## POT: the 50/50
+
+**POT-1. Pot record.**
+- `games/5050` holds `{ amount, ticketPrice, drawTime, updatedAt }`.
+- Each save also adds a history entry with the saver's email. Only admins can read history, and it can't be edited or deleted.
+- `amount` is 0–10 000 000. "1,240.50" is accepted and rounded to cents.
+
+*Code:* `potArea.save`, `parseAmount()`, `validPublic()`, `validHistory()`. *Check:* `database-rules`.
+
+**POT-2. Floating badge.** The badge shows when all of these are true:
+- a 50/50 exists;
+- `now < its end`;
+- the viewer is on a guest page (not Admin, a game screen, the run sheet, or the 50/50's own page);
+- it hasn't been dismissed with ×, or the draw is within 10 minutes.
+
+It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "DRAWING".
+*Code:* `updateFloat()`.
+
+**POT-3. Pot animation.** When a saved pot rises, the amount counts up over 0.9 s with a "+$x" flash. On reduce-motion devices it changes instantly.
+*Code:* `animatePot()`.
+
+**POT-4. 50/50 winners.** A 50/50 winner entered with a ticket number is stored as "[name] (ticket #[n])".
+*Code:* `gm-win-form` submit.
+
+---
+
+## GAME: game screens (time controls)
+
+**GAME-1. Start now.** The draft start becomes now, rounded down to the minute. The length stays the same, so the end moves with it.
+*Code:* `gm-start-now` handler. *Check:* `preview-startnow`.
+
+**GAME-2. End now.**
+- The draft length becomes `max(1, floor((now − draft start) / 1 min))`.
+- It's only available while `draft start ≤ now < draft end`.
+
+*Code:* `gm-end-now` handler.
+
+**GAME-3. Adjust and set.**
+- −5 / +5 / +10 change the draft length.
+- "Set" picks a clock time on the start's date, or the next day if that time is earlier than the start.
+- The result must be a length of 1–720 minutes.
+
+*Code:* `moveEnd()`, `setTimes()`, `gm-set-form`.
+
+**GAME-4. Saving times** (Apply, then Save all; SAVE-1).
+- Saves only what changed (`start` and/or `length`), plus the original slot the first time (TIME-4).
+- Refused if the result breaks EVT-3.
+
+*Code:* `timeArea`. *Check:* `preview-startnow`.
+
+**GAME-5. Winners.**
+- "Add to list" and × change the draft.
+- Saving (Apply, then Save all; SAVE-1) runs a transaction on the latest list: removes the first occurrence of each removed name, then appends the added names.
+- Maximum 50 winners.
+
+*Code:* `winArea`. *Check:* `emu-two-phones-offline` (two phones).
+
+---
+
+## EVT: event times
+
+**EVT-1. Storage.**
+- `site/settings.eventStart` and `eventEnd` (timestamps) are set together or not at all.
+- `eventEnd > eventStart` and `eventEnd − eventStart ≤ 12 h`.
+
+The database enforces all of this.
+*Code:* `validEventTimes()` (rules), `rsEvCheck()`. *Check:* `database-rules`, `preview-run-sheet`.
+
+**EVT-2. Unset means unconstrained, and the run sheet waits.** With no event times, no activity is checked against event hours. The run sheet shows only the Event times panel and the note "The run sheet appears here once the event times above are applied". The timeline, list, Running late and Save all are hidden until times are applied (they don't need to be saved yet).
+
+**EVT-2a. Apply, then Save all** (`DATA-RULES.md` rule 4, "Screens with one shared Save").
+- The Event times box has **Apply** (no Save or Cancel of its own). Apply stages the picked times (`RS.evDraft`): the timeline, outside-hours flags and every staging check follow them straight away, and the summary shows them marked "unsaved".
+- Apply refuses times that can never work, on the spot, and stages nothing: an end before the start, or more than 12 hours ("Can't apply: That's 13 h. An event can run at most 12 hours."). The message stays until the times are changed.
+- Picked but not applied: "Press Apply to use these times." Applied: "Applied. Press Save all at the bottom to save them."
+- **Save all** saves applied event times together with the run sheet's activity changes, in one batch; **Cancel** in the save bar drops both. Guests see new event times only after Save all.
+- Leaving with applied, or picked but unapplied, event times asks first.
+
+*Code:* `ev-apply` handler, `evPending()`, `evStaged()`, `renderRsSaveBar()`, `rsSaveAll()`. *Check:* `preview-run-sheet`.
+*Code:* `eventWin()`, `windowProblem()`, `renderRunSheet()`. *Check:* `preview-run-sheet` (blank before, shown after, on laptop and phone).
+
+**EVT-3. The window rule.** With old times `(s₀, e₀)` and new times `(s, e)`, a change is allowed when both:
+- `s ≥ eventStart` **or** `s ≥ s₀`;
+- `e ≤ eventEnd` **or** `e ≤ e₀`.
+
+So a move can't take an activity outside the event, and one already outside can only move closer. A new activity must be fully inside.
+
+Applies to the activity editor, game screens and run sheet moves. On the run sheet, moves are checked against the **applied** event times (EVT-2a), so an activity can move into time the event was just extended by, before Save all. The database applies the same test to the settings as they'll be **after** the save (`getAfter`), so extending the event in the same save counts.
+*Code:* `windowProblem()`, `rsSetDraft()`, `timesInEvent()` / `insideOrCloser()` (rules). *Check:* `database-rules`, `preview-run-sheet`, `emu-run-sheet`.
+
+**EVT-4. Unmoved saves always pass.** A save that leaves `start` and `length` unchanged (winners, tickets, labels, look) is never refused by EVT-3.
+*Code:* `unmoved()` (rules). *Check:* `database-rules`.
+
+**EVT-5. Setting times for the first time.** Allowed even if activities fall outside. Those are then flagged as outside.
+*Code:* `renderRsSaveBar()` (the stranding check in EVT-6 only applies when times were already saved).
+
+**EVT-6. No stranding.** Applying new event times that would leave an activity outside, when it's fully inside the saved times, is allowed while staging: the activity is flagged outside. **Save all** then refuses ("⏰ Can't save: Buffet Dinner would be outside event hours (…)"), offering "Extend event … & save all" where that fits in 12 hours, until the activity is moved or the times are changed. Moving the activity and changing the event times can be saved together. The page checks this; the database can't, because it can't scan all activities in a rule (Q4).
+*Code:* `renderRsSaveBar()`. *Check:* `preview-run-sheet`.
+
+**EVT-7. Outside, explained.** Activities outside event hours are labelled:
+- "Outside event hours" (no overlap with the event at all);
+- "Starts before the event starts";
+- "Ends after the event ends".
+
+Those with no overlap are listed under "Outside event hours". Those partly outside get an orange outline on the timeline.
+*Code:* `rsOutsideText()`, `renderTimeline()`.
+
+---
+
+## RS: run sheet (admins)
+
+**RS-1. Layout.**
+- Above 760 px wide: a timeline with one row per venue, from 30 minutes before the event start to 30 minutes after the end, shading outside event hours, a midnight marker per date change, and a now line. The Now and Midnight labels sit in a strip above the hour labels, never over the activities; when they're close, the left one's label flips leftwards so they don't overlap.
+- At 760 px or less: a list (Earlier / On now / Coming up / Outside event hours), with a date heading at each new day.
+
+*Code:* `renderTimeline()`, `renderRsPhone()`.
+
+**RS-2. Drafts.** Time and venue changes are per-activity drafts, until Save all or Cancel. The live/finished labels on the run sheet use **saved** times, not draft times.
+*Code:* `RS.drafts`, `rsState()`.
+
+**RS-3. Single moves.**
+- Start −5 / +5 / +10 moves the whole activity (the length stays the same). End −5 / +5 / +10 changes the length.
+- Start now keeps the length. End now sets the end to now.
+- Every change is checked against EVT-3 straight away; a refused change is never added to the draft.
+
+*Code:* `rsControls()`, `rsSetDraft()`.
+
+**RS-4. Exact pickers.**
+- In the editing controls, the section "Or set an exact date and time" folds. It starts folded, except for an activity outside event hours ("Set the date and time (suggested to fit the event)"), where it starts open. Once shown, its open or closed state is kept per activity while the run sheet is open, so it doesn't fold itself away when Apply brings the activity inside the event.
+- Inside the section: the Starts and Ends pickers, then **Apply** (stages the picked times) and **Undo** (only when the activity has an unsaved change; drops its draft). "Unsaved change" shows on the section's heading line, so it's visible when folded.
+- A date box plus hour, minute (5-minute steps; an existing off-step minute is kept) and AM/PM dropdowns.
+- Dates are limited to the event's dates.
+- The result must be **fully inside** the event, which is stricter than EVT-3.
+- For an activity that's outside, it suggests the same time of day on the first event date where it fits.
+
+*Code:* `rsControls()`, `dateTimePick()`, `rsSuggestedStart()`, `RS.exactOpen`. *Check:* `preview-run-sheet`, `preview-motion`.
+
+**RS-4a. Editing panel layout (laptop).** From the top: the activity's name; its venue, type, day and state (in white); "Originally scheduled …" if moved on the night; the hint "Moving the start keeps the length the same…"; Start and End with their buttons; Venue; the folding exact date and time section; and "⏰ Outside event hours." (or "Starts before the event starts." / "Ends after the event ends.") for an activity outside the event. With nothing selected it just says "Click an activity on the timeline to change its time or venue."
+
+*Code:* `renderRsSide()`, `rsControls()`.
+
+**RS-5. Running late.**
+- Moves every activity that is upcoming (by saved times), at least partly inside the event, and starts after the chosen point ("Now", or a chosen activity, which is itself included).
+- Moves by 5, 10, 15, 30 or 60 minutes.
+- Live and finished activities are skipped.
+- "Add to changes" stages the moves as drafts.
+
+*Code:* `rsLateMoves()`, `renderLate()`.
+
+**RS-6. Warn while staging, enforce at Save** (`DATA-RULES.md`, rule 8).
+- If a push would end past the event's end, the panel warns and offers "Extend the event to [time]", rounded up to the quarter hour. That's greyed out if it would exceed 12 h.
+- At Save all, any draft breaking EVT-3 blocks the save. The bar then offers "Extend event to [time] & save all", rounded out to quarter hours, if the result is ≤ 12 h.
+
+*Code:* `rsViolations()`, `renderRsSaveBar()`. *Check:* `preview-run-sheet`, `emu-run-sheet`.
+
+**RS-7. Save all.** One batch:
+- for each changed activity, only the changed fields of `start`, `length` and `venue`, plus the original slot the first time its times change (TIME-4);
+- plus the new event times when extending.
+
+The database checks EVT-3 against the event times after the save.
+*Code:* `rsSaveAll()`. *Check:* `emu-run-sheet`.
+
+**RS-8. Overlaps.** Two activities at the same venue may overlap. Nothing warns about it: they show stacked in their venue's row on the timeline. It never blocks.
+*Code:* `renderTimeline()` (lanes).
+
+---
+
+## VEN: venues
+
+**VEN-1. List.**
+- 1–20 venues, each with an ID and a name (30 characters max).
+- Names are required to save.
+- A new venue's ID is "v" + a time-based code.
+
+*Code:* `venueArea`, `validSettings()`.
+
+**VEN-2. In use.** A venue used by any activity can't be removed. If another admin moves an activity into a venue that this draft removes, the save is refused.
+*Code:* `renderVenueRows()`, `venueArea.check`.
+
+**VEN-3. Removed but referenced.** An activity whose venue ID isn't in the list shows the raw ID. In the editor it appears as "[id] (removed)".
+*Code:* `fillVenueOptions()`.
+
+---
+
+## ADMIN: Admin page layout
+
+**ADMIN-1. Panels fold.** Title section, Navigation bar, Demo mode (previews only), Venues and Activities each fold on their heading (▸ / ▾), independently. For a new visitor, Activities starts open and the rest start folded; each browser remembers which were left open (`localStorage` key `livenite-folds`). A folded panel shows only its heading (Activities' Add activity and Clear all appear once it's unfolded). A folded panel with changes shows "Unsaved changes" on its heading (Demo mode shows "On" when it's on); the save bar also names panels with changes not applied. Unfolding slides the panel's contents in (MOTION-RULES rule 7).
+
+*Code:* `setupFolds()`, `cards.css` (`.panel.foldable`). *Check:* `preview-save-rules`.
+
+**ADMIN-2. Settings | Run sheet tabs.** Both Admin pages start with "Logged in as … Log out", then the same two tabs, Settings (`#admin`) and Run sheet (`#runsheet`), with the current one highlighted; each page also has "← Back to tonight". Switching tabs with unsaved changes (applied or not) asks first, like leaving any page (DATA-RULES rule 4): Stay, or Leave without saving. Changes don't carry over between the two pages, so the same activity is never being changed in two places at once. Logging out with unsaved changes asks first too.
+
+*Code:* `index.html` (`.admin-tabs`), the leave guard. *Check:* `preview-run-sheet`.
+
+## SAVE: Apply, then Save all (every screen)
+
+**SAVE-1. Boxes apply; the save bar saves.** (`DATA-RULES.md` rule 4, "Screens with one shared Save".)
+- Every edit box has **Apply** and **Undo**: Admin's title section, navigation bar and venues; the game screens' time, winners, 50/50 pot and winning tickets. (The run sheet's are in EVT-2a and RS.)
+- Apply checks the box (its own rules, such as a blank venue name or more than 50 winners) and refuses with "Can't apply: …" and nothing staged; otherwise it stages the box. A change after Apply needs Apply again.
+- Messages: "Press Apply to use these changes." before Apply; "Applied. Press Save all at the bottom to save." after.
+- Each screen has a save bar at the bottom (`#admin-savebar`, `#gm-savebar`): "N unsaved changes", **Save all**, **Cancel**. Save all is refused with "Apply or undo the changes in … first." while any box has changes not applied, and with "Can't save: …" when a check across boxes fails. Cancel drops every box's changes.
+- The bar's parts are made once and only updated, so a press is never lost to a redraw.
+- "Task done" ticks (Claimed) still save instantly, outside this.
+
+*Code:* `editArea()`, `applyArea()`, `undoArea()`, `markArea()`, `markPageBars()`, `runPageSave()`, `PAGES`. *Check:* `preview-save-rules`.
+
+**SAVE-2. Admin saves in one step.** Save all on Admin writes the title section, navigation bar, venues and every applied activity change (new, edited, deleted) in one batch, so related changes (say, a new venue and an activity moved into it) can't land without each other.
+- The activity editor's **Apply** stages the activity (closing the editor). Its row then shows "Unsaved change", "New, unsaved" or "Will be deleted when you press Save all", with **Undo**. Reopening it shows the applied values. **Cancel** in the editor closes it without applying.
+- Delete takes two taps, then waits for Save all (DATA-RULES rule 6). Deleting an activity that was never saved just removes it.
+- Checks across boxes at Save all: only one 50/50 among the activities as they'll be, and no removed venue still used by an activity as it'll be.
+- Load sample night and Clear all write straight away, so they're refused until applied changes are saved or cancelled.
+
+*Code:* `actStage`, `effActs()`, `PAGES[0]`, `m-form` (Apply) and `m-delete` handlers, `renderActList()`. *Check:* `preview-save-rules`, `emu-two-phones-offline`.
+
+**SAVE-3. Game screens save box by box.** Save all on a game screen saves each applied box in turn (they're separate records with nothing checked between them). If one fails, the boxes before it stay saved and the failed one keeps its changes and shows why.
+
+*Code:* `PAGES[1]`, `saveAreaNow()`. *Check:* `preview-save-rules`, `preview-startnow`, `preview-wname`.
+
+**SAVE-4. The save bar is never covered.** The Admin and game screens sit above the footer, the footer gets room underneath, and the unsaved-changes bar sits above the save bar.
+
+*Code:* `cards.css` (`main.admin`, `.leave-bar`). *Check:* `preview-pinned`.
+
+## ACC: access
+
+**ACC-1. Guests** can read activities, site settings and the 50/50 pot, without logging in.
+**ACC-2. Admins** are logged-in users with a document at `managers/{uid}`. Only admins can create, update or delete activities, save site settings, save the pot, and read pot history. No one can add themselves to the admin list from a page.
+**ACC-3. Field checks.** The database checks every saved activity's fields (types, sizes, allowed fields) whatever the page sends, and requires `updatedAt` to be the server's time.
+*Code:* `firestore.rules`. *Check:* `database-rules` (80 checks).
+
+**ACC-4. Game managers** (planned): see TODO.md.
+
+---
+
+## MOT: motion and feedback
+
+How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets are MOTION-RULES rules.
+
+**MOT-1. Press-in and hover.** [1, 2]
+- Buttons, × buttons, the header (site title and Admin button), menu links, the Draws menu, footer links, "← Back" links, the floating 50/50 badge, the draw guide's fold, Admin's menu tick boxes, home cards, run sheet blocks, phone list items, the outside-hours list, tick boxes, dropdowns and the Running late "By" choices shrink to 95% and darken while pressed (home cards to 97%). Disabled buttons don't.
+- On computers with a mouse: a subtle hover on most things; main (yellow) buttons, run sheet blocks and the floating 50/50 badge lift 3 px with a light ring. Pressing always wins over hovering.
+
+*Code:* `cards.css`, "Motion and feedback". *Check:* `preview-motion`.
+
+**MOT-2. Selected look.** [3]
+- The selected run sheet block, the selected outside-hours item, the open phone list item's header and the Admin activity row being edited turn white, keeping a stripe of their own card colour across 30% (the Admin row's mini card is its stripe).
+- Cream card looks (Ticket, Diner) use an orange stripe. On the timeline, `--bw` (the block's share of the row) keeps the stripe at 30% of the block.
+
+*Code:* `cards.css`; `renderTimeline()` sets `--bw`. *Check:* `preview-motion`.
+
+**MOT-3. Glow where you were working.** [4]
+- A 1-second yellow glow (`glow()`) shows on what a tap changed, in the place the tap came from:
+  - run sheet editing controls (side panel or phone editor): the new Start or End time itself glows (`glowText()`, a glow around the digits); a venue change doesn't glow; the timeline block and list item don't glow;
+  - Running late "Add to changes" and the save bar's Cancel: the moved blocks or list items;
+  - Admin: a menu item moved with ↑ / ↓ (in its new place); a newly added venue row;
+  - game screens: the new Start or End time itself (`glowText()`) after −5 / +5 / +10, Start now, End now or Set; a newly added winner; newly added prizes.
+- Database updates never glow (except MOT-6).
+
+*Code:* `glow()`, `glowText()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
+
+**MOT-4. Slides, and every tap counting.** [5, 6, 7]
+- On the run sheet, these slide for ¼ second, then glow. The slide moves the real blocks and list items from their old place to their new one (matched by activity id), so taps keep working mid-slide. Positions are measured inside each list, so a page scroll doesn't make everything slide: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
+- These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
+- The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out, and the draw guide's steps slide in when it's unfolded, with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
+- The run sheet sits above the footer, so its fixed Save all bar is never covered (the footer used to cover it when the page was scrolled to the bottom).
+- Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
+- No slides with reduce motion on (`canMove()`). Nothing uses View Transitions, which block taps while they play.
+
+*Code:* `rsTap()`, `panelIn()`, `panelOut()`, `canMove()`. *Check:* `preview-motion` (quick-tap checks on the run sheet and game screen, and Save all pressed straight after Apply).
+
+**MOT-5. Errors.** [11]
+- Every error message shakes for ¼ second and vibrates on phones that allow it (not iPhones): `bad()` / `setStatus(…, true)`, Event times errors, "Could not save" on the run sheet, the save bar when it first turns to "Can't save", and blocked-change notes.
+- With reduce motion, a red flash instead of the shake.
+
+*Code:* `shake()`. *Check:* `preview-motion`.
+
+**MOT-6. Cards glow as they go LIVE.** [12] On the home page, a card glows once when its activity goes LIVE while the page is open. The 50/50 pot counts up to a new, higher amount on the main site (POT) and, since Nov 14, on the separate 50/50 board and TV screen (`5050/`, `5050/tv/`), where it also brightens briefly; with reduce motion it changes straight away. Those two pages' header links press in like the main site's. The run sheet gives no cue for changes from elsewhere.
+
+*Code:* `homeCard()`; `board.js` `countUp()`, `theme.css`. *Check:* `preview-motion` (home cards); the 50/50 board and TV count-up were checked by hand, with no automated test yet.
+
+**MOT-7. Reduce motion.** [10] Nothing slides, shrinks or shakes; glows and the red error flash still show.
+
+*Code:* `reduceMotion`, `cards.css`. *Check:* `preview-motion`.
+
+## DEMO: demo mode (previews only)
+
+**DEMO-1. Pretend clock.**
+- When on, `Date.now()` returns the real time plus an offset, so the pretend clock keeps running.
+- It applies to every time-based rule on the page.
+- It's stored in this browser only (`localStorage`) and survives reloads.
+
+*Code:* `preview-only/demo.js`. *Check:* `preview-demo`.
+
+**DEMO-2. Never live.** Demo mode is added by `preview-tools/build.py` and isn't in any published file (see DECISIONS.md).
+
+---
+
+## Open questions
+
+- **Q4. No-stranding is page-only.** The database can't check EVT-6, because its rules look at one record at a time and can't scan all activities. A buggy or out-of-date page could shrink the event around activities; they'd then show as outside event hours. **Decision (2026-11-04):** keep the page check for now. Add a server-side check (a Firebase Cloud Function, which needs the Blaze plan) later. See TODO.md.
+- **Q5. Winners' names on Draws are public.** Still undecided (see TODO.md).
+
+## Known limits
+
+- **L1.** Claimed is matched by position (DRAW-4). If someone saves a list with a prize removed while another person ticks Claimed on the same draw, the tick can land on the wrong prize. Fix: give each prize a permanent ID.
+
+## Resolved questions
+
+- **Q1 (2026-11-04).** Length limits differed (editor 5–360 minutes, elsewhere 1–720). Resolved: the editor now allows up to 720 minutes too. See TIME-3.
+- **Q3 (2026-11-04).** One 50/50 wasn't enforced by the database. Resolved: the database now requires claiming `site/fiftyFifty`. See TYPE-1.
+- **Q2 (2026-11-04).** The original schedule was handled inconsistently. Resolved: game screens and the run sheet both remember the original start and length; the editor clears them as a re-plan. See TIME-4.
+- **Q6 (2026-11-04).** Tests weren't in the repository. Resolved: they're in `tests/`, with `tests/run.sh` and `tests/README.md`.
+
+## Change history
+
+- **2026-11-04:** First version, written from the code on the `design` branch (commit `373b5d3`).
+- **2026-11-04:** TIME-3 (editor allows 720 minutes), TYPE-1 (one 50/50 enforced by the database), ACC-3 (78 checks). Tests moved into `tests/`, and every *Check* now names a test there. Q1, Q3 and Q6 resolved.
+- **2026-11-05:** EVT-2: the run sheet stays blank until event times are saved (it used to show every activity).
+- **2026-11-04:** TIME-4 rewritten (original start and length remembered by game screens and the run sheet, and shown on both); GAME-4, DRAW-7, RS-7 and ACC-3 (80 checks) updated. Q2 resolved; Q4 kept open with a decision to add a server-side check later.
+- **2026-11-14:** New MOT section (MOT-1 to MOT-7) for MOTION-RULES.md: press-in, hover, selected look, glow where you were working, slides only for one-off changes, error shake, cards glowing as they go LIVE. The game screen's time notes now keep their space so buttons don't shift between taps.
+- **2026-11-14:** RS-1: the Now and Midnight labels moved to a strip above the timeline, so they no longer cover activities.
+- **2026-11-14:** Editing panel reworked from the "Editing panel" mock-up (RS-4, new RS-4a): the exact date and time section folds, "Use these times" is now Apply, "Undo this change" is now Undo beside it, "Unsaved change" sits on the section heading, the hint moved above Start, the info line is white, no "Editing" label, and "Outside event hours." replaces the longer message. RS-8: overlap warnings removed. MOT-3: times glow on the digits; venue changes don't glow.
+- **2026-11-14:** MOT-1, MOT-3, MOT-4 extended to every page: the header, footer, back links, floating 50/50 badge and draw guide press in; Admin's moved menu items and new venues glow; the draw guide's steps slide in.
+- **2026-11-14:** MOT-6: the separate 50/50 board and TV screen count the pot up and brighten it; their header links press in.
+- **2026-11-16:** EVT-2, new EVT-2a, EVT-3, EVT-5, EVT-6: event times use Apply (refusing impossible times on the spot), then Save all with the run sheet's changes; moves and outside-hours flags follow the applied times; stranding is refused at Save all instead of when setting the times. The generic Apply / Save all rule is in DATA-RULES.md rule 4.
+- **2026-11-16:** MOT-4: run sheet slides now move the real items instead of using View Transitions, which ignored taps for ¼ second (a Save all pressed straight after Apply was lost).
+- **2026-11-16:** Fixed: after Apply on an outside-hours activity, the footer covered Save all and every block slid. RS-4 (the section stays open), MOT-4 (positions measured inside each list; the save bar above the footer).
+- **2026-11-17:** New SAVE section (SAVE-1 to SAVE-4): Apply, then Save all on Admin and the game screens, matching the run sheet. GAME-4, GAME-5 and DRAW-5 now save through it.
+- **2026-11-17:** New ADMIN-1: Admin panels fold, remembered per browser.
+- **2026-11-17:** New ADMIN-2: Settings | Run sheet tabs replace "Open the run sheet" and "Back to Admin".
+- **2026-11-17:** ADMIN-2: "Logged in as … Log out" sits above the tabs on both Admin pages; logging out with unsaved changes asks first.
