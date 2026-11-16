@@ -136,6 +136,10 @@ const q = await (await b.newContext({ viewport: { width: 1280, height: 900 }, fo
 await q.goto(f + "#admin"); await q.waitForTimeout(500);
 const folded = (id) => q.evaluate((i) => document.getElementById(i).classList.contains("folded"), id);
 ck(!(await folded("acts-box")) && await folded("t-box") && await folded("n-box") && await folded("v-box") && !(await q.isVisible("#a-brand")), "Activities starts open; Title, Navigation bar and Venues start folded");
+await q.click("#acts-title");
+ck(await folded("acts-box") && !(await q.isVisible("#m-add")), "folded Activities hides Add activity and Clear all");
+await q.click("#acts-title");
+ck(await q.isVisible("#m-add"), "unfolded Activities shows Add activity again");
 await q.click("#t-title");
 ck(!(await folded("t-box")) && await q.isVisible("#a-brand"), "tapping a heading unfolds the panel");
 await q.fill("#a-brand", "Folded change"); await q.click("#t-title");

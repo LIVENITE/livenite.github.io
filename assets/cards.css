@@ -374,6 +374,8 @@ body:has(#view-admin:not([hidden])) .leave-bar, body:has(#view-gm:not([hidden]))
 .panel.foldable h3::before { content: "▾ "; color: var(--muted); font-size: 0.7em; vertical-align: middle; }
 .panel.foldable.folded h3::before { content: "▸ "; }
 .panel.foldable.folded > :not(.fold-head) { display: none !important; }
+/* A folded panel shows only its heading: buttons in the heading row (Add activity, Clear all) wait until it's unfolded. */
+.panel.foldable.folded > .fold-head > :not(h3) { display: none !important; }
 .panel.foldable.folded { gap: 0; }
 .panel.foldable.folded.dirty h3::after { content: "Unsaved changes"; margin-left: 12px; font: italic 600 14px var(--font-body); color: var(--bulb); vertical-align: middle; }
 #demo-box.foldable.folded.dirty h3::after { content: "On"; }

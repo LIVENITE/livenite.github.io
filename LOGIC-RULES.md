@@ -408,7 +408,7 @@ The database checks EVT-3 against the event times after the save.
 
 ## ADMIN: Admin page layout
 
-**ADMIN-1. Panels fold.** Title section, Navigation bar, Demo mode (previews only), Venues and Activities each fold on their heading (▸ / ▾), independently. For a new visitor, Activities starts open and the rest start folded; each browser remembers which were left open (`localStorage` key `livenite-folds`). A folded panel with changes shows "Unsaved changes" on its heading (Demo mode shows "On" when it's on); the save bar also names panels with changes not applied. Unfolding slides the panel's contents in (MOTION-RULES rule 7).
+**ADMIN-1. Panels fold.** Title section, Navigation bar, Demo mode (previews only), Venues and Activities each fold on their heading (▸ / ▾), independently. For a new visitor, Activities starts open and the rest start folded; each browser remembers which were left open (`localStorage` key `livenite-folds`). A folded panel shows only its heading (Activities' Add activity and Clear all appear once it's unfolded). A folded panel with changes shows "Unsaved changes" on its heading (Demo mode shows "On" when it's on); the save bar also names panels with changes not applied. Unfolding slides the panel's contents in (MOTION-RULES rule 7).
 
 *Code:* `setupFolds()`, `cards.css` (`.panel.foldable`). *Check:* `preview-save-rules`.
 
