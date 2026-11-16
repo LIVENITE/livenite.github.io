@@ -13,12 +13,20 @@ await p.click("#rs-open"); await p.waitForTimeout(500);
 ck(await p.isVisible("#view-runsheet") && (await t("#ev-summary")) === "", "run sheet opens; event times not set yet");
 ck((await t("#ev-status")).startsWith("Not set yet"), "asks for event times");
 ck(await p.isVisible("#rs-empty") && !(await p.isVisible("#rs-tl-panel")) && !(await p.isVisible("#rs-toolbar")) && !(await p.isVisible("#rs-savebar")), "run sheet is blank until event times are set");
-// Set event times 7:30 PM Oct 29 → 2:00 AM Oct 30.
+// EVT-1: Apply refuses times that can never work, on the spot, and stages nothing.
+await pick(p, "#ev-start .dtpick", "2026-10-29", 7, 0, "PM"); await pick(p, "#ev-end .dtpick", "2026-10-30", 8, 30, "AM");
+await p.click("#ev-apply"); await p.waitForTimeout(200);
+ck((await t("#ev-status")).includes("Can't apply") && (await t("#ev-status")).includes("12 hours") && await p.isVisible("#rs-empty"), "Apply refuses 13 h 30 min and stages nothing: " + await t("#ev-status"));
+// Set event times 7:30 PM Oct 29 → 2:00 AM Oct 30: Apply stages them, Save all saves them.
 await pick(p, "#ev-start .dtpick", "2026-10-29", 7, 30, "PM"); await pick(p, "#ev-end .dtpick", "2026-10-30", 2, 0, "AM");
-await p.click("#ev-save"); await p.waitForTimeout(300);
-ck((await t("#ev-summary")).includes("7:30 PM") && (await t("#ev-summary")).includes("6 h 30 min"), "event times saved: " + await t("#ev-summary"));
+ck((await t("#ev-status")).includes("Press Apply"), "picked but not applied: asks for Apply");
+await p.click("#ev-apply"); await p.waitForTimeout(300);
+ck((await t("#ev-summary")).includes("7:30 PM") && (await t("#ev-summary")).includes("6 h 30 min") && (await t("#ev-summary")).includes("unsaved"), "event times applied, not saved yet: " + await t("#ev-summary"));
+ck((await t("#ev-status")).includes("Save all") && (await t("#rs-savebar")).includes("New event times"), "the bottom bar offers Save all for the new event times");
+ck(!(await p.isVisible("#rs-empty")) && await p.isVisible("#rs-tl-panel"), "the run sheet appears once event times are applied");
 ck(await p.locator("#rs-away .oi").count() === 3, "3 activities listed outside event hours");
-ck(!(await p.isVisible("#rs-empty")) && await p.isVisible("#rs-tl-panel"), "the run sheet appears once event times are saved");
+await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await p.waitForTimeout(300);
+ck(!(await t("#ev-summary")).includes("unsaved") && (await t("#rs-savebar")).includes("No unsaved"), "Save all saves the event times");
 // Guest home page shows them.
 await p.goto(f + "#"); await p.waitForTimeout(300);
 ck((await t("#event-when")).includes("7:30 PM – 2:00 AM"), "home shows event times: " + await t("#event-when"));
@@ -33,6 +41,19 @@ await p.locator("#rs-side button", { hasText: "Add to changes" }).click();
 ck((await t("#rs-savebar")).includes("Can't save"), "Save all refused past the end: " + (await t("#rs-savebar")).slice(0, 80));
 await p.locator("#rs-savebar button", { hasText: "& save all" }).click(); await p.waitForTimeout(300);
 ck((await t("#ev-summary")).includes("2:30 AM") && (await t("#rs-savebar")).includes("No unsaved"), "extended to 2:30 AM and saved together: " + await t("#ev-summary"));
+// Moves follow the applied event times: with the end applied (not saved) at 3:00 AM, an activity can move to end at 2:45 AM.
+await pick(p, "#ev-end .dtpick", "2026-10-30", 3, 0, "AM"); await p.click("#ev-apply"); await p.waitForTimeout(200);
+await p.locator("#rs-tl .bar", { hasText: "Buffet" }).click();
+await p.locator("#rs-side .exact-head").click();
+await pick(p, "#rs-side .exact-grid .field:nth-child(1) .dtpick", "2026-10-30", 1, 45, "AM"); await pick(p, "#rs-side .exact-grid .field:nth-child(2) .dtpick", "2026-10-30", 2, 45, "AM");
+await p.locator("#rs-side .exact button", { hasText: "Apply" }).click(); await p.waitForTimeout(200);
+ck((await t("#rs-savebar")).includes("1 unsaved change + new event times"), "a move into the applied (unsaved) extra time is allowed: " + (await t("#rs-savebar")).slice(0, 60));
+await p.locator("#rs-savebar button", { hasText: "Cancel" }).click(); await p.waitForTimeout(300);
+ck((await t("#ev-summary")).includes("2:30 AM") && !(await t("#ev-summary")).includes("unsaved") && (await t("#rs-savebar")).includes("No unsaved"), "Cancel at the bottom drops the move and the applied event times");
+// Shrinking the event can't strand activities: Apply allows it, Save all refuses.
+await pick(p, "#ev-end .dtpick", "2026-10-29", 11, 0, "PM"); await p.click("#ev-apply"); await p.waitForTimeout(200);
+ck((await t("#rs-savebar")).includes("Can't save") && (await t("#rs-savebar")).includes("Buffet"), "Save all refuses event times that leave activities outside: " + (await t("#rs-savebar")).slice(0, 90));
+await p.locator("#rs-savebar button", { hasText: "Cancel" }).click(); await p.waitForTimeout(300);
 // TIME-4: pushed activities remember where they were originally scheduled.
 await p.locator("#rs-tl .bar", { hasText: "Buffet" }).click();
 ck((await p.textContent("#rs-side")).includes("Originally scheduled 10:00 – 11:00"), "a pushed activity shows its original slot");
@@ -60,7 +81,8 @@ await q.clock.install({ time: new Date("2026-10-29T21:20:00-04:00") });
 await q.goto(f + "#runsheet", { waitUntil: "load" }); await q.waitForTimeout(800);
 ck(await q.isVisible("#rs-empty") && !(await q.isVisible("#rs-list")), "phone: blank until event times are set");
 await pick(q, "#ev-start .dtpick", "2026-10-29", 7, 30, "PM"); await pick(q, "#ev-end .dtpick", "2026-10-30", 2, 0, "AM");
-await q.click("#ev-save"); await q.waitForTimeout(300);
+await q.click("#ev-apply"); await q.waitForTimeout(300);
+await q.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await q.waitForTimeout(300);
 ck(await q.isVisible("#rs-list") && await q.locator("#rs-list .pitem").count() >= 1, "phone: run sheet list shows once times are saved");
 ck(!(await q.evaluate(() => document.documentElement.scrollWidth > innerWidth)), "phone: no sideways scroll");
 await p.goto(f + "#runsheet"); await p.waitForTimeout(400); await p.evaluate(() => document.getElementById("rs-savebar").style.display = "none");

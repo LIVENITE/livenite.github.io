@@ -48,6 +48,17 @@ Each save shows **Saving…**, then **Saved** or **Could not save** with the rea
 - The edit area shows "Unsaved changes", and its Save button is highlighted.
 - Leaving the page, or opening a different edit area, asks first: "You have unsaved changes. Leave without saving?"
 
+**Screens with one shared Save: Apply, then Save all.**
+Some screens have several edit boxes whose changes belong together (for example, a schedule and the hours it must fit in). Instead of a Save in each box, they share one save bar at the bottom of the page.
+- Each box has **Apply**. Apply puts the box's changes into the page's draft: the screen shows the result straight away, but nothing is saved. Apply never saves.
+- Apply refuses values that can never be valid on their own (for example, an end before the start, or longer than the allowed maximum), with a clear message, and stages nothing until they're fixed.
+- Checks that depend on other records follow rule 8: they warn while staging, and **Save all** refuses until they're fixed (offering the fix as one step where there is one).
+- **Save all** saves everything applied on the page in one step, so related changes can't land without each other. **Cancel** in the save bar throws all applied changes away.
+- A box may have **Undo** for its own applied change.
+- "Unsaved change" shows on each box with applied changes, and the save bar counts them.
+- Leaving the page with applied changes, or with values typed or picked but not yet applied, asks first.
+- Where it's used: so far only the run sheet (event times, activity times and venues). Other screens still have a Save in each box, until they're moved over (see TODO.md).
+
 ## 5. Save only what changed
 
 A save sends only the fields that edit area actually changed, never the whole record copied from when the screen opened.
@@ -91,8 +102,9 @@ Every edit area must pass all of these:
 7. Delete something still in use. It's blocked, with the reason shown.
 8. "Task done" ticks save instantly. Everything else waits for Save.
 9. Stage a change that breaks a rule (rule 8). It warns while staging, Save refuses it, and the offered fix saves both records together. Try it from both sides, for example by moving the activity and by changing the event times.
-10. LOGIC-RULES.md is updated in the same change: any rule whose behaviour changed is rewritten (same ID), new rules get new IDs, and the Change history has a line.
+10. On Apply / Save all screens: Apply never saves; Apply refuses impossible values and stages nothing; Save all saves everything applied in one step; Cancel in the save bar drops it all; leaving with applied or unapplied changes asks first.
+11. LOGIC-RULES.md is updated in the same change: any rule whose behaviour changed is rewritten (same ID), new rules get new IDs, and the Change history has a line.
 
 ---
 
-*Last updated 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*
+*Last updated 2026-11-16: rule 4, screens with one shared Save (Apply, then Save all), and checklist item 10. 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*

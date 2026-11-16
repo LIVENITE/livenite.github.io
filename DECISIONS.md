@@ -153,6 +153,12 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Admins only.
 - Activities are chosen by clicking or tapping, not dragged, because dragging is error-prone on phones.
 
+**Event times use Apply, then Save all at the bottom** (Nov 16, 2026)
+- The Event times box has Apply instead of Save and Cancel. Applying shows the new times on the run sheet straight away; Save all at the bottom saves them together with any activity changes, and Cancel there drops everything.
+- Special case: Apply itself refuses times that can never work (more than 12 hours, or an end before the start), with a clear message, until they're fixed.
+- Activities left outside by new event times are flagged while staging and Save all refuses until they're moved, so moving them and changing the event can be saved together.
+- Why: one screen had two different Save buttons. The rule is written generically in DATA-RULES.md (rule 4, "Screens with one shared Save"), so other screens can follow it later. For now only the run sheet uses it.
+
 **The run sheet's editing panel, reworked from a mock-up** (Nov 14, 2026)
 - Designed on its own page ("Editing panel" mock-up), then brought into the run sheet.
 - No "Editing" label. The activity's details line is white, and the hint "Moving the start keeps the length the same…" sits above Start.

@@ -23,7 +23,7 @@ for (const [root, date, hh, mm, ap] of [["#ev-start .dtpick", "2026-10-29", "7",
   const r = p.locator(root); await r.locator("input[type=date]").fill(date); await r.locator("input[type=date]").dispatchEvent("change");
   await r.locator("select").nth(0).selectOption(hh); await r.locator("select").nth(1).selectOption(mm); await r.locator("select").nth(2).selectOption(ap);
 }
-await p.click("#ev-save"); await p.waitForTimeout(300);
+await p.click("#ev-apply"); await p.waitForTimeout(300); await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await p.waitForTimeout(300);
 ck((await t("#rs-now")).includes("9:2"), "run sheet now line at 9:20: " + await t("#rs-now"));
 await p.click("#rs-late-btn"); ck(!(await p.isDisabled("#rs-side button:has-text('Add to changes')")), "Running late has things to move");
 await p.locator("#rs-side button", { hasText: "Cancel" }).click();

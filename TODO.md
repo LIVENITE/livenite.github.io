@@ -8,6 +8,8 @@
 
 - **Game manager logins.** Each game manager gets their own email login and can only update the games an admin assigns to them (end time, winners, ticket lists). Today only admins (the `managers` list) can log in and run every game screen.
 
+- **Move other screens to Apply, then Save all, where it fits.** DATA-RULES.md rule 4 now describes screens with one shared Save. Only the run sheet uses it so far; Admin and the game screens still have a Save in each box. Decide screen by screen.
+
 ## Later (with the Blaze plan)
 
 - **Server-side check that event times can't strand activities.** The database rules can't scan all activities, so today only the page stops event times being shortened around activities (LOGIC-RULES EVT-6, Q4). A small Firebase Cloud Function could check every change on Firebase's own servers and undo one that strands activities. Cloud Functions need the pay-as-you-go Blaze plan, which is already planned before any real event. Check current pricing when switching.

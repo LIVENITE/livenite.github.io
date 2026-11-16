@@ -18,7 +18,7 @@ async function open(viewport, opts = {}, hash = "#runsheet", time = "2026-10-29T
 }
 async function setTimes(p) {
   await pick(p, "#ev-start .dtpick", "2026-10-29", 7, 0, "PM"); await pick(p, "#ev-end .dtpick", "2026-10-30", 2, 0, "AM");
-  await p.click("#ev-save"); await p.waitForTimeout(400);
+  await p.click("#ev-apply"); await p.waitForTimeout(400); await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await p.waitForTimeout(400);
 }
 const vt = (p) => p.evaluate(() => window.__vt);
 const settle = (p) => p.waitForFunction(() => !document.documentElement.classList.contains("rs-moving"), null, { timeout: 3000 }).catch(() => {});

@@ -291,7 +291,16 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 The database enforces all of this.
 *Code:* `validEventTimes()` (rules), `rsEvCheck()`. *Check:* `database-rules`, `preview-run-sheet`.
 
-**EVT-2. Unset means unconstrained, and the run sheet waits.** With no event times, no activity is checked against event hours. The run sheet shows only the Event times panel and the note "The run sheet appears here once the event times above are saved". The timeline, list, Running late and Save all are hidden until times are saved.
+**EVT-2. Unset means unconstrained, and the run sheet waits.** With no event times, no activity is checked against event hours. The run sheet shows only the Event times panel and the note "The run sheet appears here once the event times above are applied". The timeline, list, Running late and Save all are hidden until times are applied (they don't need to be saved yet).
+
+**EVT-2a. Apply, then Save all** (`DATA-RULES.md` rule 4, "Screens with one shared Save").
+- The Event times box has **Apply** (no Save or Cancel of its own). Apply stages the picked times (`RS.evDraft`): the timeline, outside-hours flags and every staging check follow them straight away, and the summary shows them marked "unsaved".
+- Apply refuses times that can never work, on the spot, and stages nothing: an end before the start, or more than 12 hours ("Can't apply: That's 13 h. An event can run at most 12 hours."). The message stays until the times are changed.
+- Picked but not applied: "Press Apply to use these times." Applied: "Applied. Press Save all at the bottom to save them."
+- **Save all** saves applied event times together with the run sheet's activity changes, in one batch; **Cancel** in the save bar drops both. Guests see new event times only after Save all.
+- Leaving with applied, or picked but unapplied, event times asks first.
+
+*Code:* `ev-apply` handler, `evPending()`, `evStaged()`, `renderRsSaveBar()`, `rsSaveAll()`. *Check:* `preview-run-sheet`.
 *Code:* `eventWin()`, `windowProblem()`, `renderRunSheet()`. *Check:* `preview-run-sheet` (blank before, shown after, on laptop and phone).
 
 **EVT-3. The window rule.** With old times `(s₀, e₀)` and new times `(s, e)`, a change is allowed when both:
@@ -300,17 +309,17 @@ The database enforces all of this.
 
 So a move can't take an activity outside the event, and one already outside can only move closer. A new activity must be fully inside.
 
-Applies to the activity editor, game screens and run sheet moves. The database applies the same test to the settings as they'll be **after** the save (`getAfter`), so extending the event in the same save counts.
+Applies to the activity editor, game screens and run sheet moves. On the run sheet, moves are checked against the **applied** event times (EVT-2a), so an activity can move into time the event was just extended by, before Save all. The database applies the same test to the settings as they'll be **after** the save (`getAfter`), so extending the event in the same save counts.
 *Code:* `windowProblem()`, `rsSetDraft()`, `timesInEvent()` / `insideOrCloser()` (rules). *Check:* `database-rules`, `preview-run-sheet`, `emu-run-sheet`.
 
 **EVT-4. Unmoved saves always pass.** A save that leaves `start` and `length` unchanged (winners, tickets, labels, look) is never refused by EVT-3.
 *Code:* `unmoved()` (rules). *Check:* `database-rules`.
 
 **EVT-5. Setting times for the first time.** Allowed even if activities fall outside. Those are then flagged as outside.
-*Code:* `ev-save` handler.
+*Code:* `renderRsSaveBar()` (the stranding check in EVT-6 only applies when times were already saved).
 
-**EVT-6. No stranding.** Changing existing event times is refused if any activity currently fully inside would end up outside. The page checks this; the database can't, because it can't scan all activities in a rule (Q4).
-*Code:* `ev-save` handler. *Check:* none yet (the run sheet mockup was tested, but that test wasn't carried over).
+**EVT-6. No stranding.** Applying new event times that would leave an activity outside, when it's fully inside the saved times, is allowed while staging: the activity is flagged outside. **Save all** then refuses ("⏰ Can't save: Buffet Dinner would be outside event hours (…)"), offering "Extend event … & save all" where that fits in 12 hours, until the activity is moved or the times are changed. Moving the activity and changing the event times can be saved together. The page checks this; the database can't, because it can't scan all activities in a rule (Q4).
+*Code:* `renderRsSaveBar()`. *Check:* `preview-run-sheet`.
 
 **EVT-7. Outside, explained.** Activities outside event hours are labelled:
 - "Outside event hours" (no overlap with the event at all);
@@ -497,3 +506,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-14:** Editing panel reworked from the "Editing panel" mock-up (RS-4, new RS-4a): the exact date and time section folds, "Use these times" is now Apply, "Undo this change" is now Undo beside it, "Unsaved change" sits on the section heading, the hint moved above Start, the info line is white, no "Editing" label, and "Outside event hours." replaces the longer message. RS-8: overlap warnings removed. MOT-3: times glow on the digits; venue changes don't glow.
 - **2026-11-14:** MOT-1, MOT-3, MOT-4 extended to every page: the header, footer, back links, floating 50/50 badge and draw guide press in; Admin's moved menu items and new venues glow; the draw guide's steps slide in.
 - **2026-11-14:** MOT-6: the separate 50/50 board and TV screen count the pot up and brighten it; their header links press in.
+- **2026-11-16:** EVT-2, new EVT-2a, EVT-3, EVT-5, EVT-6: event times use Apply (refusing impossible times on the spot), then Save all with the run sheet's changes; moves and outside-hours flags follow the applied times; stranding is refused at Save all instead of when setting the times. The generic Apply / Save all rule is in DATA-RULES.md rule 4.

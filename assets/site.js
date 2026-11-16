@@ -1239,9 +1239,9 @@ function rsVName(id) { return VENUES[id] || id; }
 function rsCur(a) { return RS.drafts[a.id] || { s: a.s, e: a.e, v: a.v }; }
 function rsChanged(a) { var d = RS.drafts[a.id]; return !!d && (d.s !== a.s || d.e !== a.e || d.v !== a.v); }
 function rsState(a) { var n = rsNow(); return n >= a.e ? "done" : n >= a.s ? "live" : "next"; }
-function rsOutside(c, ev) { ev = ev || rsEv(); return !!ev && (c.s < ev.s || c.e > ev.e); }
-function rsInWindow(c, ev) { ev = ev || rsEv(); return !ev || (c.e > ev.s && c.s < ev.e); }
-function rsOutsideText(c) { var ev = rsEv(); return c.e <= ev.s || c.s >= ev.e ? "Outside event hours" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
+function rsOutside(c, ev) { ev = ev || rsEvNow(); return !!ev && (c.s < ev.s || c.e > ev.e); }
+function rsInWindow(c, ev) { ev = ev || rsEvNow(); return !ev || (c.e > ev.s && c.s < ev.e); }
+function rsOutsideText(c) { var ev = rsEvNow(); return c.e <= ev.s || c.s >= ev.e ? "Outside event hours" : c.s < ev.s ? "Starts before the event starts" : "Ends after the event ends"; }
 function hm(m) { return clock(toMs(m)); }
 function hmU(m) { return hm(m).replace("p.m.", "PM").replace("a.m.", "AM"); }
 function hmShort(m) { return hm(m).replace(/ [ap]\.m\./, ""); }
@@ -1253,7 +1253,7 @@ function rsByIdIn(list, id) { return list.filter(function (a) { return a.id === 
 function rsSetDraft(a, s, e, v, slide) {
   var c = rsCur(a); v = v || c.v;
   if (e - s < 1) { rsToast("The end can't be before the start."); return; }
-  var ev = rsEv();
+  var ev = rsEvNow(); // the applied event times, saved or not
   // Single moves can't go outside event hours; one already outside may only move closer.
   if (ev && (s < Math.min(c.s, ev.s) || e > Math.max(c.e, ev.e))) {
     rsToast("Blocked: that would put " + a.t + " outside event hours (" + hmU(ev.s) + " – " + hmU(ev.e) + "). Change the event times first if the night is longer.");
@@ -1310,7 +1310,13 @@ function rsEvCheck(d) {
   return "";
 }
 var evStartPick = null, evEndPick = null;
-function evChanged() { RS.evDraft = { s: evStartPick.get(), e: evEndPick.get() }; renderEventPanel(); renderRsSaveBar(); }
+function evPicked() { return evStartPick ? { s: evStartPick.get(), e: evEndPick.get() } : null; }
+function sameEv(x, y) { return !!x && !!y && x.s === y.s && x.e === y.e; }
+// Times picked but not applied yet.
+function evPending() { var p = evPicked(); return !!RS.evPickTouched && !!p && p.s != null && p.e != null && !sameEv(p, rsEvNow()); }
+// Applied event times that differ from the saved ones (they save with Save all).
+function evStaged() { var saved = rsEv(); return !!RS.evDraft && !sameEv(RS.evDraft, saved); }
+function evChanged() { RS.evPickTouched = true; $("ev-status").classList.remove("bad"); renderEventPanel(); }
 function renderEventPanel(force) {
   if (!evStartPick) {
     evStartPick = dateTimePick(null, "Event start", evChanged); evEndPick = dateTimePick(null, "Event end", evChanged);
@@ -1320,36 +1326,31 @@ function renderEventPanel(force) {
   // Not set yet: suggest the evening of the first activity, 7:00 PM to 1:00 AM.
   var shown = d || { s: Math.floor((sorted()[0] ? toM(sorted()[0].start) : 0) / 1440) * 1440 + 19 * 60, e: 0 };
   if (!d) shown.e = shown.s + 6 * 60;
-  if (force || !RS.evDraft) { evStartPick.set(shown.s); evEndPick.set(shown.e); }
-  var dirty = !!RS.evDraft && (!saved || RS.evDraft.s !== saved.s || RS.evDraft.e !== saved.e);
-  $("ev-box").classList.toggle("dirty", dirty);
-  $("ev-save").disabled = !dirty && !!saved; $("ev-cancel").disabled = !dirty;
+  // Until someone changes the pickers, they follow the applied (or saved) times as those arrive.
+  if (force) RS.evPickTouched = false;
+  if (!RS.evPickTouched) { evStartPick.set(shown.s); evEndPick.set(shown.e); }
+  var pending = evPending(), staged = evStaged();
+  $("ev-box").classList.toggle("dirty", pending || staged);
+  $("ev-apply").disabled = !pending && !!d;
   var st = $("ev-status");
-  if (dirty) { var p = rsEvCheck(RS.evDraft); st.className = "ev-status " + (p ? "bad" : "unsaved"); st.textContent = p || "Unsaved changes"; }
-  else if (!saved) { st.className = "ev-status unsaved"; st.textContent = "Not set yet. Set the event times to plan the whole night and check activities against them."; }
+  if (st.classList.contains("bad")) { /* a refusal stays until the times are changed */ }
+  else if (pending) { st.className = "ev-status unsaved"; st.textContent = "Press Apply to use these times."; }
+  else if (staged) { st.className = "ev-status unsaved"; st.textContent = "Applied. Press Save all at the bottom to save them."; }
+  else if (!saved) { st.className = "ev-status unsaved"; st.textContent = "Not set yet. Pick the event times, then press Apply."; }
   else if (st.className.indexOf("ok") < 0) { st.className = "ev-status"; st.textContent = ""; }
-  if (saved) { var len = saved.e - saved.s; $("ev-summary").textContent = rsDayName(saved.s) + ", " + hmU(saved.s) + " → " + rsDayName(saved.e) + ", " + hmU(saved.e) + " · " + Math.floor(len / 60) + " h" + (len % 60 ? " " + len % 60 + " min" : ""); }
-  else $("ev-summary").textContent = "";
+  var len = d ? d.e - d.s : 0;
+  $("ev-summary").textContent = d ? rsDayName(d.s) + ", " + hmU(d.s) + " → " + rsDayName(d.e) + ", " + hmU(d.e) + " · " + Math.floor(len / 60) + " h" + (len % 60 ? " " + len % 60 + " min" : "") + (staged ? " · unsaved" : "") : "";
   $("ev-guest").textContent = saved ? fullWhen(eventWin()) : "nothing yet";
 }
-function saveEventTimes(d) {
-  return saveSettings({ eventStart: Timestamp.fromMillis(toMs(d.s)), eventEnd: Timestamp.fromMillis(toMs(d.e)) });
-}
-$("ev-save").addEventListener("click", function () {
-  var d = RS.evDraft || rsEvNow() || { s: evStartPick.get(), e: evEndPick.get() };
-  if (!RS.evDraft && !rsEv()) d = { s: evStartPick.get(), e: evEndPick.get() };
-  var p = rsEvCheck(d), st = $("ev-status");
-  if (p) { st.className = "ev-status bad"; st.textContent = p; shake(st); return; }
-  // Changing the event can't leave activities that are inside it now stranded outside (rule 8, both sides).
-  var cur = rsEv(), list = rsActs();
-  // (Setting them for the first time is fine: anything outside is then flagged for you to move.)
-  var stranded = cur ? list.filter(function (a) { var c = rsCur(a); return !rsOutside(c, cur) && rsOutside(c, d); }) : [];
-  if (stranded.length) { st.className = "ev-status bad"; st.textContent = "Those times would leave " + stranded.map(function (a) { return a.t; }).join(", ") + " outside the event. Move them first."; shake(st); return; }
-  st.className = "ev-status"; st.textContent = "Saving…";
-  saveEventTimes(d).then(function () { RS.evDraft = null; st.className = "ev-status ok"; st.textContent = "Saved. The run sheet and guests' home page show the new times."; refresh(); renderRunSheet(true); },
-    function (err) { st.className = "ev-status bad"; st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; shake(st); });
+// Apply: times that can never work (end before start, longer than 12 hours) are refused on the spot and nothing is
+// staged until they're fixed. Anything else is staged, and Save all at the bottom saves it with the activity changes.
+$("ev-apply").addEventListener("click", function () {
+  var d = evPicked(), p = rsEvCheck(d), st = $("ev-status");
+  if (p) { st.className = "ev-status bad"; st.textContent = "Can't apply: " + p; shake(st); return; }
+  RS.evDraft = sameEv(d, rsEv()) ? null : d; RS.evPickTouched = false;
+  st.className = "ev-status";
+  rsTap({ instant: true, force: true });
 });
-$("ev-cancel").addEventListener("click", function () { RS.evDraft = null; $("ev-status").className = "ev-status"; $("ev-status").textContent = ""; renderEventPanel(true); renderRsSaveBar(); });
 
 // ---- Running late ----
 function rsLateMoves(list) {
@@ -1359,7 +1360,7 @@ function rsLateMoves(list) {
     .sort(function (x, y) { return rsCur(x).s - rsCur(y).s; });
 }
 function renderLate(box, list) {
-  var moves = rsLateMoves(list), skip = list.filter(function (a) { return rsInWindow(rsCur(a)) && rsState(a) !== "next"; }), ev = rsEv();
+  var moves = rsLateMoves(list), skip = list.filter(function (a) { return rsInWindow(rsCur(a)) && rsState(a) !== "next"; }), ev = rsEvNow();
   box.append(el("p", "eyebrow", "Running late"), el("h3", null, "Push the rest of the night"));
   var f1 = el("label", "field", "Move everything starting after");
   var sel = el("select", "sel-box"); sel.append(new Option("Now (" + hm(rsNow()) + ")", "now"));
@@ -1382,7 +1383,7 @@ function renderLate(box, list) {
     var need = Math.ceil(Math.max.apply(null, past.map(function (a) { return rsCur(a).e + RS.late.by; })) / 15) * 15;
     var x = el("button", "btn small", "Extend the event to " + hmU(need)); x.type = "button"; x.style.marginTop = "8px";
     if (need - rsEvNow().s > EVENT_MAX_MIN) { x.disabled = true; w.append(el("div", null, "Extending to " + hmU(need) + " would make the event longer than 12 hours.")); }
-    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all, or press Save there."); rsTap({ instant: true, force: true }); });
+    x.addEventListener("click", function () { RS.evDraft = { s: rsEvNow().s, e: need }; rsToast("Event end set to " + hmU(need) + " in Event times. It saves with Save all."); rsTap({ instant: true, force: true }); });
     w.append(el("br"), x); box.append(w);
   }
   box.append(el("span", "rs-h", "SKIPPED: LIVE OR FINISHED"));
@@ -1398,13 +1399,13 @@ function renderLate(box, list) {
 
 // ---- Editing controls (laptop side panel and phone row) ----
 function rsSuggestedStart(a) {
-  var c = rsCur(a), ev = rsEv(); if (!ev || !rsOutside(c)) return c.s;
+  var c = rsCur(a), ev = rsEvNow(); if (!ev || !rsOutside(c)) return c.s;
   var tod = ((c.s % 1440) + 1440) % 1440;
   for (var d = Math.floor(ev.s / 1440); d <= Math.floor(ev.e / 1440); d++) { var s0 = d * 1440 + tod; if (s0 >= ev.s && s0 + (c.e - c.s) <= ev.e) return s0; }
   return ev.s;
 }
 function rsControls(a, list) {
-  var c = rsCur(a), box = el("div", "rs-controls"), ev = rsEv(), now = rsNow();
+  var c = rsCur(a), box = el("div", "rs-controls"), ev = rsEvNow(), now = rsNow();
   box.setAttribute("data-ctl", a.id);
   function row(which) {
     var r = el("div", "time-row"); r.setAttribute("data-row", which);
@@ -1471,7 +1472,7 @@ function rsControls(a, list) {
 // ---- Laptop timeline ----
 function renderTimeline(list) {
   var tl = $("rs-tl"); tl.replaceChildren();
-  var ev = rsEv(), inEv = list.filter(function (a) { return rsInWindow(rsCur(a)); });
+  var ev = rsEvNow(), inEv = list.filter(function (a) { return rsInWindow(rsCur(a)); });
   // The whole event (with 30 min either side), or every activity when event times aren't set.
   var t0 = ev ? ev.s - 30 : Math.min.apply(null, inEv.map(function (a) { return rsCur(a).s; }).concat([rsNow()])) - 30;
   var t1 = ev ? ev.e + 30 : Math.max.apply(null, inEv.map(function (a) { return rsCur(a).e; }).concat([rsNow() + 60])) + 30;
@@ -1555,7 +1556,7 @@ function renderRsSide(list) {
 // ---- Phone list ----
 function renderRsPhone(list) {
   var pl = $("rs-list"); pl.replaceChildren();
-  var ev = rsEv(), sortedList = list.slice().sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
+  var ev = rsEvNow(), sortedList = list.slice().sort(function (p, q) { return rsCur(p).s - rsCur(q).s; });
   function item(a) {
     var st = rsState(a), c = rsCur(a), open = RS.open === a.id;
     var it = el("div", "pitem s-" + a.style + (open ? " open" : "") + (rsChanged(a) ? " moved" : ""));
@@ -1623,46 +1624,50 @@ function rsSaveAll(list, newEv) {
     // Clear the drafts we just saved; the database snapshot redraws the timeline.
     changed.forEach(function (a) { delete RS.drafts[a.id]; });
     if (newEv) RS.evDraft = null;
-    rsToast("Saved " + n + " change" + (n > 1 ? "s" : "") + (newEv ? " and the new event times" : "") + ". Every screen shows it now.");
+    rsToast((n ? "Saved " + n + " change" + (n > 1 ? "s" : "") + (newEv ? " and the new event times" : "") : "Saved the new event times") + ". Every screen shows it now.");
     renderRunSheet(true);
   }, function (err) { clearTimeout(slow); st.textContent = "Could not save (" + errText(err) + "). Your changes are still here; try again."; st.className = "bar-block"; shake(st); });
 }
 function renderRsSaveBar() {
   var list = rsActs(), n = list.filter(rsChanged).length, bar = $("rs-savebar"); bar.replaceChildren();
-  var ev = rsEv(), bad = n && ev ? rsViolations(list, ev) : [];
-  var evOk = RS.evDraft && !rsEvCheck(RS.evDraft) && !rsViolations(list, RS.evDraft).length;
-  var evDirty = RS.evDraft && (!ev || RS.evDraft.s !== ev.s || RS.evDraft.e !== ev.e);
+  var saved = rsEv(), ev = rsEvNow(), evDirty = evStaged(), any = n || evDirty;
+  // Changed activities must sit inside the applied event hours (one already outside may only move closer), and new
+  // event times can't leave activities that are inside the saved hours outside (rule 8, checked from both sides).
+  var moved = ev ? rsViolations(list, ev) : [];
+  var stranded = evDirty && saved ? list.filter(function (a) { var c = rsCur(a); return moved.indexOf(a) < 0 && !rsOutside(c, saved) && rsOutside(c, ev); }) : [];
+  var bad = moved.concat(stranded);
   var status = el("span", "unsaved"); status.id = "rs-status";
-  if (bad.length && !evOk) {
+  if (bad.length) {
     status.className = "bar-block";
     if (!RS.blocked) setTimeout(function () { shake($("rs-status")); }, 0);
     status.textContent = "⏰ Can't save: " + bad.map(function (a) { return a.t; }).join(", ") + " would be outside event hours (" + hmU(ev.s) + " – " + hmU(ev.e) + ").";
     bar.append(status);
-    var need = { s: Math.floor(Math.min(ev.s, Math.min.apply(null, bad.map(function (a) { return RS.drafts[a.id].s; }))) / 15) * 15, e: Math.ceil(Math.max(ev.e, Math.max.apply(null, bad.map(function (a) { return RS.drafts[a.id].e; }))) / 15) * 15 };
+    var pos = bad.map(rsCur);
+    var need = { s: Math.floor(Math.min(ev.s, Math.min.apply(null, pos.map(function (c) { return c.s; }))) / 15) * 15, e: Math.ceil(Math.max(ev.e, Math.max.apply(null, pos.map(function (c) { return c.e; }))) / 15) * 15 };
     if (need.e - need.s <= EVENT_MAX_MIN) {
       var ext = el("button", "btn", (need.s < ev.s ? "Start event at " + hmU(need.s) + (need.e > ev.e ? ", end at " + hmU(need.e) : "") : "Extend event to " + hmU(need.e)) + " & save all"); ext.type = "button";
       ext.addEventListener("click", function () { rsSaveAll(list, need); });
       bar.append(ext);
     } else bar.append(el("span", "bar-block", "Extending would make the event longer than 12 hours. Move them back instead."));
   } else {
-    status.textContent = n ? n + " unsaved change" + (n > 1 ? "s" : "") + (evDirty && evOk ? " + new event times" : "") : "No unsaved changes";
+    status.textContent = n ? n + " unsaved change" + (n > 1 ? "s" : "") + (evDirty ? " + new event times" : "") : evDirty ? "New event times (unsaved)" : "No unsaved changes";
     bar.append(status);
-    var save = el("button", "btn", "Save all"); save.type = "button"; save.disabled = !n;
-    save.addEventListener("click", function () { rsSaveAll(list, evDirty && evOk ? RS.evDraft : null); });
+    var save = el("button", "btn", "Save all"); save.type = "button"; save.disabled = !any;
+    save.addEventListener("click", function () { rsSaveAll(list, evDirty ? RS.evDraft : null); });
     bar.append(save);
   }
-  var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.disabled = !n;
-  cancel.addEventListener("click", function () { var was = Object.keys(RS.drafts); RS.drafts = {}; rsTap({ flash: was }); });
+  var cancel = el("button", "btn ghost", "Cancel"); cancel.type = "button"; cancel.disabled = !any;
+  cancel.addEventListener("click", function () { var was = Object.keys(RS.drafts); RS.drafts = {}; RS.evDraft = null; rsTap({ flash: was, force: true }); });
   bar.append(cancel);
-  bar.toggleAttribute("data-clean", !n);
-  RS.blocked = !!(bad.length && !evOk);
+  bar.toggleAttribute("data-clean", !any);
+  RS.blocked = !!bad.length;
 }
 
 // The run sheet counts as one edit area for the "unsaved changes" guard.
 var rsArea = {
   statusId: "rs-status", shown: function () { return !$("view-runsheet").hidden; },
-  dirty: function () { var list = rsActs(); return list.some(rsChanged) || (!!RS.evDraft && (!rsEv() || RS.evDraft.s !== rsEv().s || RS.evDraft.e !== rsEv().e)); },
-  discard: function () { RS.drafts = {}; RS.evDraft = null; RS.late = null; },
+  dirty: function () { var list = rsActs(); return list.some(rsChanged) || evStaged() || evPending(); },
+  discard: function () { RS.drafts = {}; RS.evDraft = null; RS.late = null; RS.evPickTouched = false; },
   redraw: function () { renderRunSheet(true); },
   mark: function () {}
 };
@@ -1681,7 +1686,7 @@ function renderRunSheet(forceEvent) {
   placeRsToolbar();
   renderEventPanel(forceEvent);
   // Until event times are saved, the run sheet stays blank apart from the Event times panel (LOGIC-RULES EVT-2).
-  var blank = !eventWin();
+  var blank = !rsEvNow();
   $("rs-empty").hidden = !blank;
   ["rs-toolbar", "rs-list", "rs-savebar"].forEach(function (id) { $(id).hidden = blank; });
   document.querySelector("#view-runsheet .rs-layout").hidden = blank;
