@@ -38,6 +38,7 @@ Tests click the way a person does, so they catch what a person would hit.
 - **No shortcuts that click through things.** Never use Playwright's `force: true`, or call a button's click from code, to press something a person would tap. Those skip the check that the button is visible, enabled and not covered, which is exactly how the footer covering the run sheet's Save all was missed.
 - **Check what's really under the pointer** for anything pinned to the screen (save bars, floating badges): `document.elementFromPoint` must return the button at several points across it, not just the centre. The footer only covered the top half of Save all.
 - **Test at the bottom of the page as well as the top**, on laptop and phone sizes. Things pinned to the screen and things that change the page's height behave differently there.
+- **Save the way a person does:** press the box's Apply, then Save all in the save bar (`saveAll(page)` in `lib.mjs`).
 - **Wait for slides to finish** (a little over ¼ second) before checking where things ended up, but press buttons mid-slide where the rules promise taps keep working.
 
 ## Adding a test

@@ -1,4 +1,4 @@
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const f = PREVIEW;
 const b = await launch();
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
@@ -73,7 +73,7 @@ await p.click("#leave-go"); await p.waitForTimeout(400);
 console.log("  after leave:", await p.evaluate(() => location.hash), "admin shown:", await p.isVisible("#view-admin"), "rows:", await p.locator(".act-row").count(), "rs shown:", await p.isVisible("#view-runsheet"));
 // Activity editor respects event hours.
 await p.locator(".act-row", { hasText: "Buffet" }).getByRole("button", { name: "Edit" }).click();
-await p.fill("#m-start", "2026-10-30T05:00"); await p.click("#m-form button[type=submit]");
+await p.fill("#m-start", "2026-10-30T05:00"); await p.click("#m-apply");
 ck((await t("#m-status")).includes("outside event hours"), "editor blocks a time outside the event: " + await t("#m-status"));
 await p.click("#m-cancel");
 const q = await (await b.newContext({ viewport: { width: 390, height: 844 }, ignoreHTTPSErrors: true, timezoneId: "America/Toronto" })).newPage(); q.on("pageerror", (e) => errs.push(e.message));

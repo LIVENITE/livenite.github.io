@@ -1,4 +1,4 @@
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const f = PREVIEW;
 const b = await launch();
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
@@ -12,9 +12,9 @@ for (const [n, vp] of [["desk", { width: 1280, height: 900 }], ["phone", { width
   await p.click("#gm-start-now");
   const nowClock = await p.evaluate(() => new Date(Math.floor(Date.now() / 60000) * 60000).toLocaleTimeString("en-CA", { hour: "numeric", minute: "2-digit" }));
   ck((await p.textContent("#gm-start")) === nowClock && (await p.textContent("#gm-start-was")).includes(start0), n + " Start now sets the draft start to now, saved one shown");
-  ck((await p.textContent("#gm-time-status")) === "Unsaved changes", n + " Start now waits for Save");
+  ck((await p.textContent("#gm-time-status")).startsWith("Press Apply"), n + " Start now waits for Apply");
   ck(!(await p.isDisabled("#gm-end-now")), n + " End now becomes available with the new start");
-  await p.click("#gm-time-save"); await p.waitForTimeout(300);
+  await p.click("#gm-time-save"); await saveAll(p);
   ck((await p.textContent("#gm-time-status")).includes("everywhere"), n + " saved: " + await p.textContent("#gm-time-status"));
   // TIME-4: the original slot is remembered and shown.
   ck((await p.textContent("#gm-was")).includes("Scheduled:") && (await p.textContent("#gm-was")).includes("8:30"), n + " game screen shows the original slot: " + await p.textContent("#gm-was"));
@@ -32,10 +32,10 @@ for (const [n, vp] of [["desk", { width: 1280, height: 900 }], ["phone", { width
   await p.goto(f, { waitUntil: "load" }); await p.waitForTimeout(500);
   const pl = await p.evaluate(() => [...document.querySelectorAll("#cards a")].find((a) => a.textContent.includes("PLINKO")).getAttribute("href"));
   await p.goto(f + pl.replace("a-", "gm-")); await p.waitForTimeout(300);
-  await p.click("#gm-start-now"); await p.click("#gm-time-save"); await p.waitForTimeout(300);
+  await p.click("#gm-start-now"); await p.click("#gm-time-save"); await saveAll(p);
   await p.goto(f + "#admin"); await p.waitForTimeout(300);
   await p.locator(".act-row", { hasText: "PLINKO" }).getByRole("button", { name: "Edit" }).click();
-  await p.fill("#m-len", "45"); await p.click("#m-form button[type=submit]"); await p.waitForTimeout(300);
+  await p.fill("#m-len", "45"); await p.click("#m-apply"); await saveAll(p);
   await p.goto(f + pl.replace("a-", "gm-")); await p.waitForTimeout(300);
   ck(!(await p.textContent("#gm-was")).includes("Scheduled"), "re-planning in the editor clears the original slot");
 }

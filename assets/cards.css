@@ -303,6 +303,8 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .tick-saved { color: var(--aqua); font-size: 12px; font-weight: 700; }
 .leave-bar { position: fixed; z-index: 30; left: 50%; bottom: max(16px, env(safe-area-inset-bottom)); transform: translateX(-50%); width: min(560px, calc(100vw - 32px)); box-sizing: border-box; display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px 16px; padding: 14px 16px; background: var(--stage); border: 2px solid var(--bulb); border-radius: 16px; box-shadow: 0 16px 40px rgb(0 0 0 / 0.5); }
 .leave-bar p { margin: 0; font-weight: 600; }
+/* On screens with a save bar at the bottom, the unsaved-changes bar sits above it, so Save all stays reachable. */
+body:has(#view-admin:not([hidden])) .leave-bar, body:has(#view-gm:not([hidden])) .leave-bar, body:has(#view-runsheet:not([hidden])) .leave-bar { bottom: calc(max(16px, env(safe-area-inset-bottom)) + 96px); }
 .leave-bar div { display: flex; gap: 10px; flex-wrap: wrap; }
 
 /* Winner's name on a Draws prize: optional, shown under the prize label for guests. */
@@ -332,7 +334,7 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .runsheet .btn.small { min-height: 36px; padding: 0 12px; font-size: 14px; }
 .runsheet .btn.warn { background: transparent; color: var(--warn); border: 2px solid var(--warn); }
 .runsheet .btn.soft { background: var(--stage-2); color: var(--text); border: 2px solid var(--line); }
-.runsheet .btn:disabled { opacity: 0.45; cursor: default; }
+.runsheet .btn:disabled, .btn:disabled { opacity: 0.45; cursor: default; }
 .runsheet .danger.small { min-height: 36px; padding: 0 12px; font-size: 14px; margin: 0; }
 .runsheet .meta { color: var(--muted); font-size: 14px; }
 .runsheet .toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
@@ -367,6 +369,8 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .runsheet .bar b { display: block; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .runsheet .bar .tag { font-weight: 700; letter-spacing: 0.06em; white-space: nowrap; }
 .runsheet .bar.outside { box-shadow: inset 0 0 0 2px var(--onair); }
+.act-row .staged-note { display: block; margin-top: 6px; font-size: 13px; }
+.act-row.deleting .mini, .act-row.deleting .n b { opacity: 0.55; text-decoration: line-through; }
 .runsheet .bar.sel { outline: 3px solid #fff; outline-offset: 2px; }
 .runsheet .bar.done .tag::before { content: "✓ "; }
 .runsheet .bar.narrow { padding: 0; }
@@ -416,13 +420,13 @@ footer .wrap { display: flex; flex-wrap: wrap; justify-content: space-between; g
 .runsheet .seg { display: flex; gap: 6px; }
 .runsheet .seg span { flex: 1; text-align: center; padding: 8px 0; border: 2px solid var(--line); border-radius: 10px; font-weight: 700; cursor: pointer; color: var(--text); }
 .runsheet .seg .on { background: var(--bulb); color: var(--ink); border-color: var(--bulb); }
-.runsheet .save-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 12px 16px; background: var(--stage); border-top: 2px solid var(--bulb); z-index: 10; }
-.runsheet .save-bar[data-clean] .unsaved { color: var(--muted); font-style: normal; }
+.runsheet .save-bar, .page-bar { position: fixed; left: 0; right: 0; bottom: 0; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 14px; padding: 12px 16px; background: var(--stage); border-top: 2px solid var(--bulb); z-index: 10; }
+.runsheet .save-bar[data-clean] .unsaved, .page-bar[data-clean] .unsaved { color: var(--muted); font-style: normal; }
 /* The run sheet sits above the footer, so its fixed Save all bar is never covered by the footer, and the footer gets
    room underneath so its links aren't hidden behind the bar. */
-main.runsheet { z-index: 2; }
-body:has(#view-runsheet:not([hidden])) footer { padding-bottom: 110px; }
-.runsheet .bar-block { color: var(--onair); font-weight: 700; font-size: 14px; max-width: 520px; }
+main.runsheet, main.admin { z-index: 2; }
+body:has(#view-runsheet:not([hidden])) footer, body:has(#view-admin:not([hidden])) footer, body:has(#view-gm:not([hidden])) footer { padding-bottom: 110px; }
+.runsheet .bar-block, .page-bar .bar-block { color: var(--onair); font-weight: 700; font-size: 14px; max-width: 520px; }
 .rs-toast { position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%); background: var(--aqua); color: var(--ink); font-weight: 700; padding: 10px 16px; border-radius: 999px; z-index: 30; box-shadow: 0 10px 30px rgb(0 0 0 / 0.4); max-width: calc(100vw - 32px); text-align: center; }
 .plist { display: flex; flex-direction: column; gap: 10px; }
 .group-h { font-size: 12px; font-weight: 700; letter-spacing: 0.14em; text-transform: uppercase; color: var(--muted); margin-top: 6px; display: flex; align-items: center; gap: 8px; }
@@ -452,7 +456,7 @@ body:has(#view-runsheet:not([hidden])) footer { padding-bottom: 110px; }
   .rs-narrow { display: flex; }
   .ev-grid { grid-template-columns: 1fr; }
   .dtpick { grid-template-columns: 1fr; }
-  .runsheet .save-bar { justify-content: space-between; }
+  .runsheet .save-bar, .page-bar { justify-content: space-between; }
 }
 .runsheet .sched-note { margin: 0; color: var(--muted); font-style: italic; }
 .pitem .sch { color: var(--muted); font-size: 13px; font-style: italic; }

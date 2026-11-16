@@ -1,4 +1,4 @@
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const f = PREVIEW;
 const b = await launch();
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
@@ -12,7 +12,7 @@ const pr = await p.evaluate(() => [...document.querySelectorAll("#cards a")].fin
 await p.goto(f + pr); await p.waitForTimeout(200);
 ck((await p.textContent("#d-count")) === "Results so far" && (await p.textContent("#d-draws-state")).startsWith("Results so far: 10 of 10"), "draw page says results so far: " + await p.textContent("#d-draws-state"));
 // Marking all drawn switches to SEARCH DRAW RESULTS.
-await p.goto(f + pr.replace("#a-", "#gm-")); await p.waitForTimeout(200); await p.check("#gm-final"); await p.click("#gm-draws-save"); await p.waitForTimeout(300);
+await p.goto(f + pr.replace("#a-", "#gm-")); await p.waitForTimeout(200); await p.check("#gm-final"); await p.click("#gm-draws-save"); await saveAll(p);
 await p.goto(f + "#"); await p.waitForTimeout(200);
 ck((await state("Penny Raffle")) === "SEARCH DRAW RESULTS", "all drawn still shows SEARCH DRAW RESULTS");
 ck(errs.length === 0, "no page errors " + errs.join(" | "));

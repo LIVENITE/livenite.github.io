@@ -195,7 +195,7 @@ function scheduleOf(a) {
   var s = a.schedStart || startOf(a);
   return { s: s, e: s + (a.schedLen || a.len) * MIN };
 }
-function errText(err) { return (err && err.code) || "error"; }
+function errText(err) { return (err && (err.code || err.message)) || "error"; }
 function note(text) { $("conn-note").textContent = text; $("conn-note").hidden = !text; }
 function bad(id, text) { $(id).textContent = text; $(id).classList.add("bad"); shake($(id)); }
 function ok(id, text) { $(id).textContent = text; $(id).classList.remove("bad"); }
@@ -403,37 +403,106 @@ $("d-search-form").addEventListener("submit", function (e) { e.preventDefault();
 // Each edit area keeps its changes as a draft on screen until Save (rule 4), then saves only the
 // fields it owns (rule 5) and always says how the save went (rule 3).
 var areas = [];
+// ---- Apply, then Save all (DATA-RULES rule 4, "Screens with one shared Save") ----
+// Each box's changes are a draft. Apply checks them (refusing values that can never be valid, on the spot) and
+// stages them; the page's save bar at the bottom saves everything applied in one go, and its Cancel drops it all.
+// A box's draft that has changed since it was applied is "pending" again until Apply is pressed.
 function editArea(o) {
   areas.push(o);
-  if (o.saveId) $(o.saveId).addEventListener("click", function (e) { e.preventDefault(); runSave(o); });
-  $(o.cancelId).addEventListener("click", function () { o.discard(); o.redraw(); markArea(o); ok(o.statusId, ""); });
+  if (o.saveId) $(o.saveId).addEventListener("click", function (e) { e.preventDefault(); applyArea(o); });
+  $(o.cancelId).addEventListener("click", function () { undoArea(o); });
   return o;
 }
+function areaValue(o) { return JSON.stringify(o.draft ? o.draft() : null); }
+function pendingOf(o) { return o.pending ? o.pending() : o.dirty() && areaValue(o) !== o.appliedValue; }
+function appliedOf(o) { return o.applied ? o.applied() : o.dirty() && areaValue(o) === o.appliedValue ? 1 : 0; }
+function applyArea(o) {
+  if (!pendingOf(o)) return;
+  var problem = o.check ? o.check() : "";
+  if (problem) { o.badValue = areaValue(o); setStatus(o.statusId, "Can't apply: " + problem, true); return; }
+  o.appliedValue = areaValue(o); o.badValue = null; $(o.statusId).classList.remove("bad");
+  markArea(o);
+  if (o.boxId) glow($(o.boxId).querySelector(".status"));
+}
+function undoArea(o) {
+  o.discard(); o.appliedValue = null; o.badValue = null;
+  if (o.redraw) o.redraw();
+  $(o.statusId).classList.remove("bad"); ok(o.statusId, ""); markArea(o);
+}
 function markArea(o) {
-  if (o.mark) return o.mark();
-  var d = o.dirty();
+  if (o.mark) { o.mark(); markPageBars(); return; }
+  var d = o.dirty(), pend = d && pendingOf(o);
   if (o.boxId) $(o.boxId).classList.toggle("dirty", d);
-  if (o.saveId) $(o.saveId).disabled = !d || !!o.saving;
+  if (o.saveId) $(o.saveId).disabled = !pend || !!o.saving;
   $(o.cancelId).disabled = !d || !!o.saving;
   var st = $(o.statusId);
-  if (d && !o.saving && !st.classList.contains("bad")) { st.textContent = "Unsaved changes"; st.classList.add("unsaved"); }
-  if (!d && st.classList.contains("unsaved")) { st.textContent = ""; st.classList.remove("unsaved"); }
+  // A refusal stays until the values it refused are changed.
+  if (st.classList.contains("bad") && o.badValue != null && areaValue(o) !== o.badValue) { st.classList.remove("bad"); o.badValue = null; }
+  if (!st.classList.contains("bad") && !o.saving) {
+    if (pend) { st.textContent = "Press Apply to use these changes."; st.classList.add("unsaved"); }
+    else if (d) { st.textContent = "Applied. Press Save all at the bottom to save."; st.classList.add("unsaved"); }
+    else if (st.classList.contains("unsaved")) { st.textContent = ""; st.classList.remove("unsaved"); }
+  }
+  markPageBars();
 }
 function setStatus(id, text, isBad) { var st = $(id); st.classList.remove("unsaved"); if (isBad) bad(id, text); else ok(id, text); }
-function runSave(o) {
-  if (o.saving) return;
-  if (!o.dirty()) { setStatus(o.statusId, "No changes to save."); return; }
-  var problem = o.check ? o.check() : "";
-  if (problem) { setStatus(o.statusId, problem, true); return; }
+// Saves one applied box (used by pages whose boxes save one after another).
+function saveAreaNow(o) {
   o.saving = true; markArea(o); setStatus(o.statusId, "Saving…");
-  // A save with no signal waits for the connection; say so rather than look stuck (or falsely saved).
-  var slow = setTimeout(function () { if (o.saving) setStatus(o.statusId, "Still saving… check your signal. Your changes are kept and save when you're back online.", true); }, 8000);
-  Promise.resolve().then(o.save).then(function () {
-    clearTimeout(slow); o.saving = false; o.discard(); o.redraw(); markArea(o);
+  return Promise.resolve().then(o.save).then(function () {
+    o.saving = false; o.discard(); o.appliedValue = null; if (o.redraw) o.redraw(); markArea(o);
     setStatus(o.statusId, o.savedText || "Saved. Every screen shows it now.");
   }, function (err) {
-    clearTimeout(slow); o.saving = false; markArea(o);
+    o.saving = false; markArea(o);
     setStatus(o.statusId, "Could not save (" + errText(err) + "). Your changes are still here; try again.", true);
+    throw err;
+  });
+}
+// The save bar at the bottom of a page. Its parts are made once and only updated, so a press is never lost to a redraw.
+var PAGES = [];
+function pageBar(page) {
+  var bar = $(page.bar);
+  if (!page.parts) {
+    var st = el("span", "unsaved"), save = el("button", "btn", "Save all"), cancel = el("button", "btn ghost", "Cancel");
+    save.type = cancel.type = "button";
+    save.addEventListener("click", function () { runPageSave(page); });
+    cancel.addEventListener("click", function () {
+      page.areas().forEach(function (o) { if (o.dirty() || pendingOf(o)) undoArea(o); });
+      page.status = null; page.statusBad = false; markPageBars();
+    });
+    bar.append(st, save, cancel); page.parts = { st: st, save: save, cancel: cancel };
+  }
+  return page.parts;
+}
+function markPageBars() {
+  PAGES.forEach(function (page) {
+    if (!page.shown()) return;
+    var parts = pageBar(page), list = page.areas();
+    var pend = list.filter(pendingOf), n = list.reduce(function (t, o) { return t + appliedOf(o); }, 0);
+    var problem = !pend.length && n && page.check ? page.check() : "";
+    var wasBlocked = parts.st.className === "bar-block";
+    if (page.saving) { parts.st.className = "unsaved"; parts.st.textContent = page.status || "Saving…"; }
+    else if (pend.length) { parts.st.className = "bar-block"; parts.st.textContent = "Apply or undo the changes in " + pend.map(function (o) { return o.name; }).join(", ") + " first."; }
+    else if (problem) { parts.st.className = "bar-block"; parts.st.textContent = "⏰ Can't save: " + problem; }
+    else if (page.status && page.statusBad) { parts.st.className = "bar-block"; parts.st.textContent = page.status; }
+    else if (n) { page.status = null; parts.st.className = "unsaved"; parts.st.textContent = n + " unsaved change" + (n > 1 ? "s" : ""); }
+    else { parts.st.className = "unsaved"; parts.st.textContent = page.status || "No unsaved changes"; }
+    if (parts.st.className === "bar-block" && !wasBlocked && !page.saving) shake(parts.st);
+    parts.save.disabled = !!page.saving || !n || !!pend.length || !!problem;
+    parts.cancel.disabled = !!page.saving || !(n || pend.length);
+    $(page.bar).toggleAttribute("data-clean", !(n || pend.length));
+  });
+}
+function runPageSave(page) {
+  if (page.saving) return;
+  page.saving = true; page.status = "Saving…"; markPageBars();
+  // A save with no signal waits for the connection; say so rather than look stuck (or falsely saved).
+  var slow = setTimeout(function () { if (page.saving) { page.status = "Still saving… check your signal. Your changes are kept and save when you're back online."; markPageBars(); } }, 8000);
+  Promise.resolve().then(page.save).then(function (msg) {
+    clearTimeout(slow); page.saving = false; page.status = msg || "Saved. Every screen shows it now."; page.statusBad = false; markPageBars();
+  }, function (err) {
+    clearTimeout(slow); page.saving = false; page.status = "Could not save (" + errText(err) + "). Your changes are still here; try again."; page.statusBad = true;
+    markPageBars(); shake(pageBar(page).st);
   });
 }
 // Areas on the screen being shown that have unsaved changes.
@@ -478,6 +547,8 @@ var titleDraft = null;
 var TITLE_FIELDS = [["a-eyebrow", "eyebrow"], ["a-brand", "brand"], ["a-tagline", "tagline"]];
 function titleNow() { return titleDraft || { eyebrow: settings.eyebrow, brand: settings.brand, tagline: settings.tagline, bulbs: settings.bulbs }; }
 var titleArea = editArea({
+  name: "Title section", draft: function () { return titleDraft; },
+  fields: function () { var t = titleDraft; return { eyebrow: t.eyebrow.slice(0, 40), brand: t.brand.slice(0, 24), tagline: t.tagline.slice(0, 80), bulbs: !!t.bulbs }; },
   boxId: "t-box", saveId: "t-save", cancelId: "t-cancel", statusId: "t-status", shown: adminShown,
   dirty: function () { return !!titleDraft && !same(titleDraft, { eyebrow: settings.eyebrow, brand: settings.brand, tagline: settings.tagline, bulbs: settings.bulbs }); },
   discard: function () { titleDraft = null; },
@@ -500,6 +571,8 @@ var navDraft = null;
 function navNow() { return navDraft || { mark: settings.mark, nav: JSON.parse(JSON.stringify(settings.nav)) }; }
 function editNav() { if (!navDraft) navDraft = navNow(); return navDraft; }
 var navArea = editArea({
+  name: "Navigation bar", draft: function () { return navDraft; },
+  fields: function () { return { mark: navDraft.mark.slice(0, 24), nav: cleanNav(navDraft.nav) }; },
   boxId: "n-box", saveId: "n-save", cancelId: "n-cancel", statusId: "n-status", shown: adminShown,
   dirty: function () { return !!navDraft && !same(navDraft, { mark: settings.mark, nav: settings.nav }); },
   discard: function () { navDraft = null; },
@@ -542,6 +615,8 @@ var venueDraft = null;
 function venuesNow() { return venueDraft || JSON.parse(JSON.stringify(settings.venues)); }
 function editVenues() { if (!venueDraft) venueDraft = venuesNow(); return venueDraft; }
 var venueArea = editArea({
+  name: "Venues", draft: function () { return venueDraft; },
+  fields: function () { return { venues: cleanVenues(venueDraft) }; },
   boxId: "v-box", saveId: "v-save", cancelId: "v-cancel", statusId: "v-status", shown: adminShown,
   dirty: function () { return !!venueDraft && !same(venueDraft, settings.venues); },
   discard: function () { venueDraft = null; },
@@ -550,8 +625,8 @@ var venueArea = editArea({
     if (venueDraft.some(function (v) { return !v.name.trim(); })) return "Give every venue a name before saving.";
     // Someone may have moved an activity to a venue this draft removes.
     var gone = settings.venues.filter(function (v) { return !venueDraft.some(function (x) { return x.id === v.id; }); });
-    var inUse = gone.filter(function (v) { return acts.some(function (a) { return a.venue === v.id; }); });
-    return inUse.length ? inUse[0].name + " now has activities, so it can't be removed. Cancel, or move them first." : "";
+    var inUse = gone.filter(function (v) { return effActs().some(function (a) { return a.venue === v.id; }); });
+    return inUse.length ? inUse[0].name + " has activities, so it can't be removed. Undo, or move them first." : "";
   },
   save: function () { return saveSettings({ venues: cleanVenues(venueDraft) }); }
 });
@@ -585,6 +660,53 @@ $("a-add-venue").addEventListener("click", function () {
 });
 // The draw guide's steps slide in when it's unfolded (MOTION-RULES rule 7).
 document.querySelector("#gm-guide details").addEventListener("toggle", function (e) { if (e.target.open && canMove()) replayClass($("gm-guide-steps"), "panel-in"); });
+PAGES.push({
+  bar: "admin-savebar", shown: adminShown,
+  areas: function () { return [titleArea, navArea, venueArea, editorArea, actStageArea]; },
+  check: function () {
+    if (effActs().filter(function (a) { return a.type === "draw"; }).length > 1) return "there can only be one 50/50. Undo one of them.";
+    return venueArea.dirty() ? venueArea.check() : "";
+  },
+  // Settings and activity changes go in one batch, so related changes (say, a new venue and the activities moved
+  // into it) can't land without each other.
+  save: function () {
+    var batch = writeBatch(db), sf = {}, n = 0, claims = false;
+    [titleArea, navArea, venueArea].forEach(function (o) { if (o.dirty()) { Object.assign(sf, o.fields()); n++; } });
+    if (n) {
+      var sref = doc(db, "site", "settings"); sf.updatedAt = serverTimestamp();
+      if (settingsExists) batch.update(sref, sf);
+      else { var d = DEFAULT_SETTINGS; batch.set(sref, Object.assign({ mark: d.mark, eyebrow: d.eyebrow, brand: d.brand, tagline: d.tagline, bulbs: d.bulbs, nav: cleanNav(d.nav), venues: cleanVenues(d.venues) }, sf)); }
+    }
+    Object.keys(actStage).forEach(function (k) {
+      var st = actStage[k]; n++;
+      if (st.kind === "new") {
+        var r = doc(collection(db, "activities")); batch.set(r, st.doc);
+        if (st.becomesDraw) { claims = true; batch.set(doc(db, "site", "fiftyFifty"), { activityId: r.id, updatedAt: serverTimestamp() }); }
+      } else if (st.kind === "edit") {
+        batch.update(doc(db, "activities", st.id), Object.assign({}, st.fields, { updatedAt: serverTimestamp() }));
+        if (st.becomesDraw) { claims = true; batch.set(doc(db, "site", "fiftyFifty"), { activityId: st.id, updatedAt: serverTimestamp() }); }
+      } else batch.delete(doc(db, "activities", st.id));
+    });
+    return batch.commit().then(function () {
+      [titleArea, navArea, venueArea].forEach(function (o) { if (o.dirty()) { o.discard(); o.appliedValue = null; o.redraw(); ok(o.statusId, "Saved. Every screen shows it now."); markArea(o); } });
+      actStage = {}; renderActList(); ok("m-done", "");
+      return "Saved " + n + " change" + (n > 1 ? "s" : "") + ". Every screen shows it now.";
+    }, function (err) {
+      if (claims && errText(err) === "permission-denied") throw new Error("another activity was just made the 50/50, and there can only be one. Undo yours");
+      throw err;
+    });
+  }
+});
+// Game screens: each box saves in turn (they're separate records, with nothing checked between them).
+PAGES.push({
+  bar: "gm-savebar", shown: function () { return !$("view-gm").hidden && !!gmGame(); },
+  areas: function () { return [timeArea, winArea, potArea, slotsArea].filter(function (o) { return o.shown(); }); },
+  save: function () {
+    var list = [timeArea, winArea, potArea, slotsArea].filter(function (o) { return o.shown() && appliedOf(o); }), n = list.length;
+    return list.reduce(function (pr, o) { return pr.then(function () { return saveAreaNow(o); }); }, Promise.resolve())
+      .then(function () { return "Saved " + n + " change" + (n > 1 ? "s" : "") + ". Every screen shows it now."; });
+  }
+});
 function renderAdmin() { fillTitleInputs(); renderNavRows(); renderVenueRows(); renderActList(); }
 
 // ---------- Admin: activities editor ----------
@@ -637,26 +759,37 @@ function renderPreview() { $("m-preview").replaceChildren(cardFor(formActivity()
 function renderActList() {
   var list = $("m-list"); list.replaceChildren();
   var now = Date.now();
-  sorted().forEach(function (a) {
-    var li = el("li", "act-row" + (editing && editing.id === a.id ? " editing" : ""));
+  var rows = sorted().map(function (a) { return { a: a, key: a.id, st: actStage[a.id] }; });
+  Object.keys(actStage).forEach(function (k) { if (actStage[k].kind === "new") rows.push({ a: null, key: k, st: actStage[k] }); });
+  rows.forEach(function (r) {
+    var st = r.st, a = st && st.act ? Object.assign({}, r.a || {}, st.act, { id: r.a ? r.a.id : r.key }) : r.a;
+    var li = el("li", "act-row" + ((editing && r.a && editing.id === r.a.id) || (editingKey && editingKey === r.key) ? " editing" : "") + (st ? " staged" : "") + (st && st.kind === "delete" ? " deleting" : ""));
     var mini = el("div", "mini"); mini.append(cardFor(a, now, { static: true, heading: "h3" }));
     var n = el("div", "n");
     n.append(el("b", null, a.title), el("span", null, clock(startOf(a)) + " · " + (VENUES[a.venue] || a.venue) + " · " + a.len + " min"),
-      el("span", null, (STYLES.filter(function (st) { return st.id === a.style; })[0] || { name: a.style }).name + " · " + graphicLabel(a)));
+      el("span", null, (STYLES.filter(function (x) { return x.id === a.style; })[0] || { name: a.style }).name + " · " + graphicLabel(a)));
     if (a.hasManager) {
       var chipLine = el("span"); chipLine.style.marginTop = "6px";
       chipLine.append(el("span", "gm-chip", "Game manager: " + a.manager));
       if ((a.winners || []).length) chipLine.append(document.createTextNode("  " + a.winners.length + (a.winners.length === 1 ? " winner" : " winners")));
       n.append(chipLine);
     }
+    if (st) n.append(el("span", "unsaved staged-note", st.kind === "new" ? "New, unsaved" : st.kind === "delete" ? "Will be deleted when you press Save all" : "Unsaved change"));
     var btns = el("div"); btns.style.cssText = "display:flex;flex-direction:column;gap:8px";
-    var b = el("button", "btn ghost", "Edit"); b.type = "button";
-    b.addEventListener("click", function () { openEditorSafely(a); });
-    btns.append(b);
-    if (a.hasManager || SPECIAL[a.type]) { var g = el("a", "btn", SPECIAL[a.type] ? SPECIAL[a.type] + " screen" : "Game screen"); g.href = "#gm-" + a.id; btns.append(g); }
+    if (!st || st.kind !== "delete") {
+      var b = el("button", "btn ghost", "Edit"); b.type = "button";
+      b.addEventListener("click", function () { openEditorSafely(r.a, r.a ? null : r.key); });
+      btns.append(b);
+    }
+    if (st) {
+      var u = el("button", "btn ghost", "Undo"); u.type = "button";
+      u.addEventListener("click", function () { delete actStage[r.key]; if ((editing && r.a && editing.id === r.a.id) || editingKey === r.key) closeEditor(); renderActList(); markPageBars(); });
+      btns.append(u);
+    }
+    if (r.a && !st && (r.a.hasManager || SPECIAL[r.a.type])) { var g = el("a", "btn", SPECIAL[r.a.type] ? SPECIAL[r.a.type] + " screen" : "Game screen"); g.href = "#gm-" + r.a.id; btns.append(g); }
     li.append(mini, n, btns); list.append(li);
   });
-  if (!acts.length) list.append(el("li", "meta", "No activities yet. Add one, or load the sample night to try things out."));
+  if (!rows.length) list.append(el("li", "meta", "No activities yet. Add one, or load the sample night to try things out."));
   $("m-clear").hidden = !acts.length;
 }
 // The editor's current values, compared with what it opened with to tell whether anything changed.
@@ -668,28 +801,55 @@ function editorValues() {
     style: $("m-look").value, graphic: $("m-graphic").value, hasManager: $("m-hasgm").checked, manager: $("m-gm").value.trim()
   };
 }
+// The values the editor opened with: the applied ones if this activity already has applied changes.
+var editorShown = null;
 var editorArea = {
-  statusId: "m-status", shown: function () { return adminShown() && !$("m-editor").hidden; },
-  dirty: function () { return !!editorBase && !same(editorValues(), editorBase); },
+  name: "Activity editor", statusId: "m-status", shown: function () { return adminShown() && !$("m-editor").hidden && !!editorShown; },
+  dirty: function () { return !!editorShown && !same(editorValues(), editorShown); },
+  pending: function () { return editorArea.shown() && editorArea.dirty(); },
+  applied: function () { return 0; },
   discard: function () { closeEditor(); },
-  // The editor keeps its own Save and Cancel; it just shows whether there are unsaved changes.
+  // The editor keeps its own Apply and Cancel; it just shows whether there are changes to apply.
   mark: function () {
     var st = $("m-status"), d = editorArea.dirty();
     $("m-editor").classList.toggle("dirty", d);
-    if (d && !st.classList.contains("bad") && st.textContent !== "Saving…") { st.textContent = "Unsaved changes"; st.classList.add("unsaved"); }
+    if (d && !st.classList.contains("bad")) { st.textContent = "Press Apply to use these changes."; st.classList.add("unsaved"); }
     if (!d && st.classList.contains("unsaved")) { st.textContent = ""; st.classList.remove("unsaved"); }
   }
 };
 areas.push(editorArea);
-// Opening another activity while this one has unsaved changes asks first (rule 4).
-function openEditorSafely(a) {
-  if (editorArea.shown() && editorArea.dirty()) askLeave(function () { openEditor(a); }, [editorArea]);
-  else openEditor(a);
+
+// ---- Activities: changes applied in the editor wait here until Save all ----
+// key (an activity's id, or "new…" for one not saved yet) → { kind: "new" | "edit" | "delete", ... }
+var actStage = {}, editingKey = null;
+function effActs() {
+  var out = acts.filter(function (a) { var st = actStage[a.id]; return !(st && st.kind === "delete"); })
+    .map(function (a) { var st = actStage[a.id]; return st && st.kind === "edit" ? Object.assign({}, a, st.act, { id: a.id }) : a; });
+  Object.keys(actStage).forEach(function (k) { var st = actStage[k]; if (st.kind === "new") out.push(Object.assign({}, st.act, { id: k })); });
+  return out;
 }
-function openEditor(a) {
+var actStageArea = {
+  name: "Activities", statusId: "m-done", shown: adminShown,
+  dirty: function () { return Object.keys(actStage).length > 0; },
+  pending: function () { return false; }, applied: function () { return Object.keys(actStage).length; },
+  discard: function () { actStage = {}; }, redraw: function () { renderActList(); }, mark: function () {}
+};
+areas.push(actStageArea);
+function setEditorValues(v) {
+  $("m-title").value = v.title; $("m-tag").value = v.tag; $("m-type").value = v.type; fillVenueOptions(v.venue);
+  $("m-start").value = toLocalInput(v.start); $("m-len").value = v.len; $("m-host").value = v.host;
+  $("m-hasgm").checked = v.hasManager; $("m-gm").value = v.manager; $("m-gm-field").hidden = !v.hasManager;
+  $("m-look").value = v.style; fillGraphics(v.graphic);
+}
+// Opening another activity while this one has changes not applied yet asks first (rule 4).
+function openEditorSafely(a, key) {
+  if (editorArea.shown() && editorArea.dirty()) askLeave(function () { openEditor(a, key); }, [editorArea]);
+  else openEditor(a, key);
+}
+function openEditor(a, key) {
   isNew = !a;
-  editing = a || null;
-  delArmed = false; $("m-delete").textContent = "Delete"; $("m-delete").hidden = isNew;
+  editing = a || null; editingKey = key || null;
+  delArmed = false; $("m-delete").textContent = "Delete"; $("m-delete").hidden = isNew && !editingKey;
   $("m-form-title").textContent = isNew ? "New activity" : "Edit activity";
   $("m-title").value = a ? a.title : "";
   $("m-tag").value = a ? a.tag : "";
@@ -713,11 +873,15 @@ function openEditor(a) {
   panelIn($("m-editor"));
   // A new activity counts as unsaved from the start: leaving would lose it.
   editorBase = isNew ? {} : editorValues();
+  // Changes already applied (not saved yet) open in the editor.
+  var staged = actStage[editingKey || (a && a.id)];
+  if (staged && staged.values) setEditorValues(staged.values);
+  editorShown = staged && staged.values ? editorValues() : editorBase;
   renderPreview(); renderActList(); editorArea.mark();
   $("m-editor").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   $("m-title").focus({ preventScroll: true });
 }
-function closeEditor() { panelOut($("m-editor")); $("m-editor").classList.remove("dirty"); editing = null; isNew = false; editorBase = null; renderActList(); }
+function closeEditor() { panelOut($("m-editor")); $("m-editor").classList.remove("dirty"); editing = null; isNew = false; editorBase = null; editorShown = null; editingKey = null; renderActList(); markPageBars(); }
 $("m-add").addEventListener("click", function () { openEditorSafely(null); });
 $("m-hasgm").addEventListener("change", function () { $("m-gm-field").hidden = !$("m-hasgm").checked; if ($("m-hasgm").checked) $("m-gm").focus(); });
 // Cancel throws the draft away (rule 4).
@@ -740,14 +904,12 @@ $("m-form").addEventListener("submit", function (e) {
   if (!(len >= 5 && len <= 720)) { setStatus("m-status", "Length must be between 5 and 720 minutes (12 hours).", true); return; }
   var ns = new Date($("m-start").value).getTime(), wp = isNew ? windowProblem(null, null, ns, ns + len * MIN) : windowProblem(startOf(editing), endOf(editing), ns, ns + len * MIN);
   if (wp) { setStatus("m-status", wp + " Change the event times on the run sheet first if the night is longer.", true); return; }
-  var v = editorValues(), save;
+  var v = editorValues(), key, staged;
   // Making an activity the 50/50 claims the 50/50 slot in the same save (LOGIC-RULES TYPE-1).
-  var becomesDraw = v.type === "draw" && (isNew || editorBase.type !== "draw");
   if (isNew) {
     var f = formActivity(); f.schedLen = null;
-    var newRef = doc(collection(db, "activities"));
-    if (becomesDraw) { var nb = writeBatch(db); nb.set(newRef, toDoc(f)); nb.set(doc(db, "site", "fiftyFifty"), { activityId: newRef.id, updatedAt: serverTimestamp() }); save = nb.commit(); }
-    else save = setDoc(newRef, toDoc(f));
+    key = editingKey || "new" + Date.now().toString(36);
+    staged = { kind: "new", values: v, act: f, doc: toDoc(f), becomesDraw: v.type === "draw", title: v.title };
   } else {
     var fields = {};
     Object.keys(EDITOR_FIELDS).forEach(function (k) { if (v[k] !== editorBase[k]) fields[EDITOR_FIELDS[k]] = k === "title" ? v[k].slice(0, 60) : k === "tag" ? v[k].slice(0, 80) : v[k]; });
@@ -757,31 +919,23 @@ $("m-form").addEventListener("submit", function (e) {
     if (fields.start || fields.length) { fields.schedLength = deleteField(); fields.schedStart = deleteField(); }
     // Turning an activity into a Draws gives it a numbered prize list if it has none.
     if (fields.type === "tickets" && !(byId(editing.id) || editing).slots.length) fields.slots = newSlots(10);
-    if (!Object.keys(fields).length) { setStatus("m-status", "No changes to save."); return; }
-    var ref = doc(db, "activities", editing.id);
-    if (becomesDraw) { var ub = writeBatch(db); ub.update(ref, Object.assign(fields, { updatedAt: serverTimestamp() })); ub.set(doc(db, "site", "fiftyFifty"), { activityId: editing.id, updatedAt: serverTimestamp() }); save = ub.commit(); }
-    else save = updateDoc(ref, Object.assign(fields, { updatedAt: serverTimestamp() }));
+    key = editing.id;
+    staged = Object.keys(fields).length ? { kind: "edit", id: editing.id, values: v, act: formActivity(), fields: fields, becomesDraw: v.type === "draw" && editorBase.type !== "draw", title: v.title } : null;
   }
-  setStatus("m-status", "Saving…");
-  var slow = setTimeout(function () { setStatus("m-status", "Still saving… check your signal. Your changes are kept and save when you're back online.", true); }, 8000);
-  save.then(function () {
-    clearTimeout(slow);
-    closeEditor();
-    ok("m-done", "Saved “" + v.title + "”. Every screen shows it now.");
-  }, function (err) {
-    clearTimeout(slow);
-    if (becomesDraw && errText(err) === "permission-denied") { setStatus("m-status", "Could not save: another activity was just made the 50/50, and there can only be one. Pick another type.", true); return; }
-    setStatus("m-status", "Could not save (" + errText(err) + "). Your changes are still here; try again.", true);
-  });
+  if (staged) actStage[key] = staged; else delete actStage[key];
+  closeEditor();
+  ok("m-done", staged ? "Applied “" + v.title + "”. Press Save all at the bottom to save." : "No changes left for “" + v.title + "”.");
+  glow($("m-done"));
 });
+// Delete is deliberate (rule 6): two taps, then it waits for Save all like any other change.
 $("m-delete").addEventListener("click", function () {
-  if (!editing) return;
+  if (!editing && !editingKey) return;
   if (!delArmed) { delArmed = true; $("m-delete").textContent = "Tap again to delete"; return; }
+  if (editingKey) { var nm = actStage[editingKey].title; delete actStage[editingKey]; closeEditor(); ok("m-done", "Removed “" + nm + "” (it was never saved)."); return; }
   var name = editing.title;
-  deleteDoc(doc(db, "activities", editing.id)).then(function () {
-    closeEditor();
-    ok("m-done", "Deleted “" + name + "”.");
-  }, function (err) { setStatus("m-status", "Could not delete (" + errText(err) + ").", true); });
+  actStage[editing.id] = { kind: "delete", id: editing.id, title: name };
+  closeEditor();
+  ok("m-done", "“" + name + "” will be deleted when you press Save all. Undo on its row keeps it.");
 });
 
 // Two-tap confirm for the big buttons: the first tap arms it, the second does it.
@@ -815,7 +969,9 @@ function sampleNight(now) {
     { at: 290, len: 70, title: "Last Call Dance Party", tag: "Requests open. Lights down. Everybody up.", type: "music", venue: "stage", host: "DJ Marla", style: "neon" }
   ].map(function (a) { a.start = base + a.at * MIN; return a; });
 }
+function adminHasChanges() { return PAGES[0].areas().some(function (o) { return o.dirty() || pendingOf(o); }); }
 $("m-sample").addEventListener("click", function () {
+  if (adminHasChanges()) { setStatus("m-done", "Save all or Cancel your changes at the bottom first.", true); return; }
   var hasDraw = !!draw();
   if (acts.length && !confirmTap("m-sample", "Load sample night", "Adds 12 more. Tap again")) return;
   var batch = writeBatch(db);
@@ -835,6 +991,7 @@ $("m-sample").addEventListener("click", function () {
   batch.commit().then(function () { ok("m-done", "Sample night loaded, with event times to match. It's timed around now so something is live."); }, function (err) { bad("m-done", "Could not load the sample (" + errText(err) + ")."); });
 });
 $("m-clear").addEventListener("click", function () {
+  if (adminHasChanges()) { setStatus("m-done", "Save all or Cancel your changes at the bottom first.", true); return; }
   if (!confirmTap("m-clear", "Clear all", "Deletes all " + acts.length + ". Tap again")) return;
   var batch = writeBatch(db);
   acts.forEach(function (a) { batch.delete(doc(db, "activities", a.id)); });
@@ -865,6 +1022,7 @@ function setTimes(a, start, len) {
 function moveEnd(a, len) { setTimes(a, draftStart(a), len); }
 var timeArea = editArea({
   check: function () { var a = gmGame(), d = timeDraft; return windowProblem(startOf(a), endOf(a), d.start, d.start + d.len * MIN); },
+  name: "Time", draft: function () { return timeDraft; },
   boxId: "gm-time-box", saveId: "gm-time-save", cancelId: "gm-time-cancel", statusId: "gm-time-status", shown: gmShown("gm-time-box"),
   dirty: function () { var a = gmGame(); return !!(a && timeDraft && timeDraft.id === a.id && (timeDraft.len !== a.len || timeDraft.start !== startOf(a))); },
   discard: function () { timeDraft = null; },
@@ -932,6 +1090,7 @@ $("gm-set-form").addEventListener("submit", function (e) {
 var winDraft = null; // { id, adds: [names], removes: [names] }
 function editWins(a) { if (!winDraft || winDraft.id !== a.id) winDraft = { id: a.id, adds: [], removes: [] }; return winDraft; }
 var winArea = editArea({
+  name: "Winners", draft: function () { return winDraft; },
   boxId: "gm-win-panel", saveId: "gm-win-save", cancelId: "gm-win-cancel", statusId: "gm-win-status", shown: gmShown("gm-win-panel"),
   dirty: function () { var a = gmGame(); return !!(a && winDraft && winDraft.id === a.id && (winDraft.adds.length || winDraft.removes.length)); },
   discard: function () { winDraft = null; },
@@ -992,6 +1151,7 @@ $("gm-win-form").addEventListener("submit", function (e) {
 var potDraft = null; // { amt, price } as typed
 function potSaved() { return { amt: pot == null ? "" : String(pot), price: ticketPrice }; }
 var potArea = editArea({
+  name: "50/50 pot", draft: function () { return potDraft; },
   boxId: "gm-pot-panel", saveId: "gm-pot-save", cancelId: "gm-pot-cancel", statusId: "gm-pot-status", shown: gmShown("gm-pot-panel"),
   dirty: function () { return !!potDraft && !same(potDraft, potSaved()); },
   discard: function () { potDraft = null; },
@@ -1017,7 +1177,7 @@ function renderPot(force) {
 ["gm-pot-amt", "gm-ticket"].forEach(function (id) {
   $(id).addEventListener("input", function () { potDraft = { amt: $("gm-pot-amt").value, price: $("gm-ticket").value }; $("gm-pot-status").classList.remove("bad"); markArea(potArea); });
 });
-$("gm-pot-form").addEventListener("submit", function (e) { e.preventDefault(); runSave(potArea); });
+$("gm-pot-form").addEventListener("submit", function (e) { e.preventDefault(); applyArea(potArea); });
 
 // Draws: prize labels, ticket numbers, added or removed prizes and "All tickets drawn" wait for Save.
 // Claimed saves on the tick (a finished task) and only ever touches that one prize's tick.
@@ -1028,6 +1188,7 @@ function editSlots(a) {
 }
 function slotRows(a) { return slotsDraft && slotsDraft.id === a.id ? slotsDraft.rows : a.slots.map(function (s, i) { return { label: s.label, ticket: s.ticket, name: s.name, orig: i }; }); }
 var slotsArea = editArea({
+  name: "Winning tickets", draft: function () { return slotsDraft; },
   boxId: "gm-draws-panel", saveId: "gm-draws-save", cancelId: "gm-draws-cancel", statusId: "gm-draws-status", shown: gmShown("gm-draws-panel"),
   dirty: function () {
     var a = gmGame(); if (!a || !slotsDraft || slotsDraft.id !== a.id) return false;
@@ -1146,10 +1307,10 @@ function renderGuide(a) {
     $("gm-guide-title").textContent = "How this draw works";
     $("gm-guide-intro").textContent = "What guests see on the card depends on the draw's start and end times and on the \u201cAll tickets drawn\u201d tick. This draw runs " + s + " \u2013 " + e + (/\.$/.test(e) ? "" : ".");
     steps = [
-      ["Before " + s, "Card shows \u201cDraw at " + s + "\u201d.", "Get the prize list ready: add prizes and type their labels, then Save ticket list. Need to start early or late? Use Start now or the time buttons, then Save times."],
-      ["Drawing (" + s + " \u2013 " + e + ")", "Card shows a blinking DRAWING NOW.", "Type each winning ticket number (and the winner\u2019s name if you have it), then press Save ticket list. Guests can search the saved tickets straight away."],
-      ["All tickets drawn", "Card shows SEARCH DRAW RESULTS.", "Tick \u201cAll tickets drawn\u201d and press Save ticket list. If the draw is still running, this ends it right away."],
-      ["End time passed but not all drawn yet", "Card shows \u201cResults so far\u201d if any tickets are saved, otherwise \u201cResults soon\u201d.", "Keep entering tickets and saving. When you\u2019re done, tick \u201cAll tickets drawn\u201d and Save."],
+      ["Before " + s, "Card shows \u201cDraw at " + s + "\u201d.", "Get the prize list ready: add prizes and type their labels, then press Apply and Save all. Need to start early or late? Use Start now or the time buttons, then Apply and Save all."],
+      ["Drawing (" + s + " \u2013 " + e + ")", "Card shows a blinking DRAWING NOW.", "Type each winning ticket number (and the winner\u2019s name if you have it), then press Apply and Save all. Guests can search the saved tickets straight away."],
+      ["All tickets drawn", "Card shows SEARCH DRAW RESULTS.", "Tick \u201cAll tickets drawn\u201d then press Apply and Save all. If the draw is still running, this ends it right away."],
+      ["End time passed but not all drawn yet", "Card shows \u201cResults so far\u201d if any tickets are saved, otherwise \u201cResults soon\u201d.", "Keep entering tickets and saving. When you\u2019re done, tick \u201cAll tickets drawn\u201d, then Apply and Save all."],
       ["Prizes collected (any time)", "The ticket is crossed off on the guest list.", "Tick Claimed when someone collects their prize. It saves the moment you tick it; no Save needed."]
     ];
     at = a.resultsFinal ? 2 : st === "upcoming" ? 0 : st === "live" ? 1 : 3;
@@ -1157,10 +1318,10 @@ function renderGuide(a) {
     $("gm-guide-title").textContent = "How the 50/50 works";
     $("gm-guide-intro").textContent = "Guests see the pot and a countdown everywhere, including the floating badge. The draw is at " + s + (/\.$/.test(s) ? "" : ".");
     steps = [
-      ["Before " + s, "Card and badge show the pot and \u201cDraw in\u201d countdown.", "Update the pot as tickets sell: type the amount, then press Save pot. Every screen shows the new amount."],
-      ["Drawing (" + s + " \u2013 " + e + ")", "Card shows a blinking DRAWING NOW; the badge says DRAWING.", "Draw the ticket. Need to start early or late? Use Start now or the time buttons, then Save times."],
-      ["Winner drawn", "Once the draw ends, the card shows the winner.", "Type the winner\u2019s name and ticket number, press Add to list, then Save winners."],
-      ["After " + e, "Card shows \u201cFinished\u201d with the winner.", "Nothing more to do. To finish early, press End now, then Save times."]
+      ["Before " + s, "Card and badge show the pot and \u201cDraw in\u201d countdown.", "Update the pot as tickets sell: type the amount, then press Apply and Save all. Every screen shows the new amount."],
+      ["Drawing (" + s + " \u2013 " + e + ")", "Card shows a blinking DRAWING NOW; the badge says DRAWING.", "Draw the ticket. Need to start early or late? Use Start now or the time buttons, then Apply and Save all."],
+      ["Winner drawn", "Once the draw ends, the card shows the winner.", "Type the winner\u2019s name and ticket number, press Add to list, then Apply and Save all."],
+      ["After " + e, "Card shows \u201cFinished\u201d with the winner.", "Nothing more to do. To finish early, press End now, then Apply and Save all."]
     ];
     at = st === "upcoming" ? 0 : st === "live" ? (a.winners.length ? 2 : 1) : 3;
   }
@@ -1839,6 +2000,7 @@ function route(scroll) {
   if (showAdmin && isAdmin) { if (changedView) renderAdmin(); else { fillTitleInputs(); renderNavRows(); renderVenueRows(); if (!editing || byId(editing.id)) renderActList(); else closeEditor(); } }
   if (rs) renderRunSheet(changedView);
   if (gm) { renderGM(gm); if (changedView) ["gm-time-status", "gm-win-status", "gm-pot-status", "gm-draws-status"].forEach(function (id) { ok(id, ""); }); }
+  markPageBars();
   fillBulbs();
   if (scroll) {
     if (h === "programme") $("programme").scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth" });

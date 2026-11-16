@@ -1,4 +1,4 @@
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const f = PREVIEW;
 const b = await launch();
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
@@ -9,9 +9,9 @@ for (const [n, vp] of [["desk", { width: 1280, height: 900 }], ["phone", { width
   await p.goto(f + "#gm-" + pr.split("a-")[1]); await p.waitForTimeout(300);
   const row = p.locator("#gm-slots li").nth(1);
   await row.locator("input.wname-in").fill("Jamie L.");
-  ck((await p.textContent("#gm-draws-status")) === "Unsaved changes", n + " winner's name waits for Save");
+  ck((await p.textContent("#gm-draws-status")).startsWith("Press Apply"), n + " winner's name waits for Apply");
   await p.locator("#gm-draws-panel").screenshot({ path: SHOTS + "/wname-" + n + ".png" });
-  await p.click("#gm-draws-save"); await p.waitForTimeout(300);
+  await p.click("#gm-draws-save"); await saveAll(p);
   await p.goto(f + pr); await p.waitForTimeout(300);
   ck((await p.locator("#d-tix li").nth(1).innerText()).includes("Jamie L."), n + " guest list shows the name");
   ck(!(await p.locator("#d-tix li").nth(2).innerText()).includes("undefined"), n + " prizes without a name show nothing extra");

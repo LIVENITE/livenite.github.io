@@ -107,7 +107,7 @@
         <div class="field"><label for="gm-set">Or set the end time</label><input id="gm-set" type="time"></div>
         <button type="submit" class="btn ghost">Set</button>
       </form>
-      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-time-save">Save times</button><button type="button" class="btn ghost" id="gm-time-cancel">Cancel</button><span class="status" id="gm-time-status" role="status"></span></div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-time-save">Apply</button><button type="button" class="btn ghost" id="gm-time-cancel">Undo</button><span class="status" id="gm-time-status" role="status"></span></div>
     </section>
     <section class="panel" id="gm-pot-panel" hidden aria-labelledby="gm-pot-title">
       <h3 id="gm-pot-title">50/50 pot</h3>
@@ -115,7 +115,7 @@
       <form class="editor-form" id="gm-pot-form" autocomplete="off">
         <div class="field"><label for="gm-pot-amt">Pot amount ($)</label><input id="gm-pot-amt" type="text" inputmode="decimal" placeholder="1,240"></div>
         <div class="field"><label for="gm-ticket">Ticket price</label><input id="gm-ticket" maxlength="40" placeholder="e.g. $5 each or 3 for $10"></div>
-        <div class="form-actions area-actions"><button type="submit" class="btn" id="gm-pot-save">Save pot</button><button type="button" class="btn ghost" id="gm-pot-cancel">Cancel</button><span class="status" id="gm-pot-status" role="status"></span></div>
+        <div class="form-actions area-actions"><button type="submit" class="btn" id="gm-pot-save">Apply</button><button type="button" class="btn ghost" id="gm-pot-cancel">Undo</button><span class="status" id="gm-pot-status" role="status"></span></div>
       </form>
     </section>
     <section class="panel" id="gm-draws-panel" hidden aria-labelledby="gm-draws-title" style="grid-column: 1 / -1">
@@ -128,7 +128,7 @@
         <button type="button" class="btn ghost" id="gm-add-slot">Add another prize</button>
         <button type="button" class="btn ghost" id="gm-add-5">Add 5 more</button>
       </div>
-      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-draws-save">Save ticket list</button><button type="button" class="btn ghost" id="gm-draws-cancel">Cancel</button><span class="status" id="gm-draws-status" role="status"></span></div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-draws-save">Apply</button><button type="button" class="btn ghost" id="gm-draws-cancel">Undo</button><span class="status" id="gm-draws-status" role="status"></span></div>
     </section>
     <section class="panel" id="gm-win-panel" aria-labelledby="gm-win-title">
       <h3 id="gm-win-title">Winners</h3>
@@ -138,11 +138,12 @@
         <button type="submit" class="btn ghost">Add to list</button>
       </form>
       <ol class="win-list" id="gm-win-list"></ol>
-      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-win-save">Save winners</button><button type="button" class="btn ghost" id="gm-win-cancel">Cancel</button><span class="status" id="gm-win-status" role="status"></span></div>
+      <div class="form-actions area-actions"><button type="button" class="btn" id="gm-win-save">Apply</button><button type="button" class="btn ghost" id="gm-win-cancel">Undo</button><span class="status" id="gm-win-status" role="status"></span></div>
     </section>
   </div>
   <div id="gm-card" style="max-width:420px"></div>
   <a class="btn ghost" id="gm-page" href="#" style="align-self:flex-start">See the game page</a>
+  <div class="save-bar page-bar" id="gm-savebar" role="region" aria-label="Save all changes on this screen"></div>
 </main>
 
 <main class="wrap admin" id="view-admin" hidden>
@@ -178,7 +179,7 @@
     </div>
     <div class="field"><label for="a-tagline">Tagline (leave empty to count tonight's activities)</label><input id="a-tagline" maxlength="80"></div>
     <label class="check"><input type="checkbox" id="a-bulbs"> Show the marquee light bulbs</label>
-    <div class="form-actions area-actions"><button type="button" class="btn" id="t-save">Save</button><button type="button" class="btn ghost" id="t-cancel">Cancel</button><span class="status" id="t-status" role="status"></span></div>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="t-save">Apply</button><button type="button" class="btn ghost" id="t-cancel">Undo</button><span class="status" id="t-status" role="status"></span></div>
   </section>
 
   <section class="panel" id="n-box" aria-labelledby="n-title">
@@ -186,7 +187,7 @@
     <div class="field"><label for="a-mark">Logo text (top left)</label><input id="a-mark" maxlength="24"></div>
     <span class="lbl">Menu items: rename, show or hide, reorder</span>
     <ul class="nav-rows" id="a-nav"></ul>
-    <div class="form-actions area-actions"><button type="button" class="btn" id="n-save">Save</button><button type="button" class="btn ghost" id="n-cancel">Cancel</button><span class="status" id="n-status" role="status"></span></div>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="n-save">Apply</button><button type="button" class="btn ghost" id="n-cancel">Undo</button><span class="status" id="n-status" role="status"></span></div>
   </section>
 
   <section class="panel" id="v-box" aria-labelledby="v-title">
@@ -194,7 +195,7 @@
     <span class="lbl">Where activities happen: rename, add or remove</span>
     <ul class="nav-rows" id="a-venues"></ul>
     <button type="button" class="btn ghost" id="a-add-venue" style="align-self:flex-start">Add venue</button>
-    <div class="form-actions area-actions"><button type="button" class="btn" id="v-save">Save</button><button type="button" class="btn ghost" id="v-cancel">Cancel</button><span class="status" id="v-status" role="status"></span></div>
+    <div class="form-actions area-actions"><button type="button" class="btn" id="v-save">Apply</button><button type="button" class="btn ghost" id="v-cancel">Undo</button><span class="status" id="v-status" role="status"></span></div>
   </section>
 
   <section class="panel" aria-labelledby="acts-title">
@@ -220,7 +221,7 @@
         <div class="field"><label for="m-look">Card look</label><select id="m-look"></select></div>
         <div class="field"><label for="m-graphic">Graphic</label><select id="m-graphic"></select></div>
         <div class="form-actions">
-          <button type="submit" class="btn">Save</button>
+          <button type="submit" class="btn" id="m-apply">Apply</button>
           <button type="button" class="btn ghost" id="m-cancel">Cancel</button>
           <span class="status" id="m-status" role="status"></span>
           <button type="button" class="danger" id="m-delete">Delete</button>
@@ -238,6 +239,7 @@
       <button type="button" class="danger" id="m-clear" style="margin:0" hidden>Clear all</button>
     </div>
   </section>
+  <div class="save-bar page-bar" id="admin-savebar" role="region" aria-label="Save all changes on this screen"></div>
   </div>
 </main>
 

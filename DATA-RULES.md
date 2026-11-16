@@ -31,21 +31,21 @@ Each save shows **Saving…**, then **Saved** or **Could not save** with the rea
 
 ## 4. Saving
 
-**Edits wait for Save.**
+**Edits wait for Apply, then Save all.**
 - Typing, picking from lists, and adjustment buttons only change a draft on screen. Adjustment buttons include −5 / +5 / +10 min, End now, Set end time and Add winner.
-- Nothing is saved until you press **Save**.
-- **Cancel** throws the draft away and puts back what's saved.
+- Nothing is saved until you press the box's **Apply**, then **Save all** in the save bar at the bottom (see "Screens with one shared Save" below).
+- The box's **Undo** throws its changes away and puts back what's saved.
 
 **"Task done" ticks save instantly.**
 - Ticking off a completed task saves the moment you tick it, with "Saved" shown briefly beside it.
 - Example: **Claimed** on a prize.
 
-**Big switches go through Save.**
-- Settings that change what every guest sees wait for Save, even if they're a tick box.
+**Big switches go through Apply and Save all.**
+- Settings that change what every guest sees wait for Save all, even if they're a tick box.
 - Example: **All tickets drawn**, which ends the draw and shows the results.
 
 **Unsaved changes are obvious.**
-- The edit area shows "Unsaved changes", and its Save button is highlighted.
+- A box with changes not applied yet says "Press Apply to use these changes."; once applied it says "Applied. Press Save all at the bottom to save.", and the save bar counts the changes.
 - Leaving the page, or opening a different edit area, asks first: "You have unsaved changes. Leave without saving?"
 
 **Save buttons can always be pressed.**
@@ -61,7 +61,7 @@ Some screens have several edit boxes whose changes belong together (for example,
 - A box may have **Undo** for its own applied change.
 - "Unsaved change" shows on each box with applied changes, and the save bar counts them.
 - Leaving the page with applied changes, or with values typed or picked but not yet applied, asks first.
-- Where it's used: so far only the run sheet (event times, activity times and venues). Other screens still have a Save in each box, until they're moved over (see TODO.md).
+- Where it's used: every screen that edits data. Admin (title section, navigation bar, venues, activities), game screens (time, winners, 50/50 pot, winning tickets) and the run sheet (event times, activity times and venues). Each has its own save bar at the bottom.
 
 ## 5. Save only what changed
 
@@ -71,7 +71,7 @@ A save sends only the fields that edit area actually changed, never the whole re
 
 ## 6. Deleting is deliberate
 
-- Every delete needs two taps: "Delete", then "Tap again to delete".
+- Every delete needs two taps: "Delete", then "Tap again to delete". On screens with a save bar, the delete then waits for Save all like any other change, and the item shows "Will be deleted" with an Undo until then.
 - Anything still in use can't be deleted, and the screen says why. Example: a venue that activities still use.
 - Deleting one thing never deletes or changes anything else as a side effect.
 
@@ -97,14 +97,14 @@ Some rules are allowed to bend while you're working on a draft, but never when i
 
 Every edit area must pass all of these:
 
-1. Edit two fields in a row, then Save. Both are kept.
-2. Edit, leave the page without saving. It asks first. Cancel puts back what was saved.
-3. Save, leave the page, come back. The change is still there.
+1. Edit two fields in a row, then Apply and Save all. Both are kept.
+2. Edit, leave the page without saving. It asks first. Undo puts back what was saved.
+3. Save all, leave the page, come back. The change is still there.
 4. Two phones edit the same record at once. Neither wipes the other's changes.
 5. Save while offline, then come back online. You see "Could not save" (or it saves once you're back), never a false "Saved".
 6. Reload in the middle of an edit. Nothing half-saved appears.
 7. Delete something still in use. It's blocked, with the reason shown.
-8. "Task done" ticks save instantly. Everything else waits for Save.
+8. "Task done" ticks save instantly. Everything else waits for Apply and Save all.
 9. Stage a change that breaks a rule (rule 8). It warns while staging, Save refuses it, and the offered fix saves both records together. Try it from both sides, for example by moving the activity and by changing the event times.
 10. Scroll to the very bottom of the page, on laptop and phone, then press Save (or Save all). It works: nothing covers it, and nothing on the page jumps when you press it.
 11. On Apply / Save all screens: Apply never saves; Apply refuses impossible values and stages nothing; Save all saves everything applied in one step; Cancel in the save bar drops it all; leaving with applied or unapplied changes asks first.
@@ -112,4 +112,4 @@ Every edit area must pass all of these:
 
 ---
 
-*Last updated 2026-11-16: rule 4, save buttons can always be pressed, and checklist item 10 (press Save at the bottom of the page), after the footer covered the run sheet's Save all. Also 2026-11-16: rule 4, screens with one shared Save (Apply, then Save all), and checklist item 11. 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*
+*Last updated 2026-11-17: Apply, then Save all on every screen (rules 4 and 6, checklist 1–3 and 8). 2026-11-16: rule 4, save buttons can always be pressed, and checklist item 10 (press Save at the bottom of the page), after the footer covered the run sheet's Save all. Also 2026-11-16: rule 4, screens with one shared Save (Apply, then Save all), and checklist item 11. 2026-11-04: checklist item 10 (keep LOGIC-RULES.md in step). 2026-11-03: added rule 8 (warn while staging, enforce at Save). Change these rules only on purpose, and note why.*

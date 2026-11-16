@@ -1,7 +1,7 @@
 // MOTION-RULES.md checklist, run against the design preview with motion on:
 // press-in, hover, selected look, glow where you were working, repeat-tap buttons instant and every tap counting,
 // slides then glow, nothing else moving, panels sliding, errors shaking, reduce motion, and cards glowing as they go LIVE.
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const b = await launch([], { motion: true });
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
 async function pick(p, root, date, hh, mm, ap) { const r = p.locator(root); await r.locator("input[type=date]").fill(date); await r.locator("input[type=date]").dispatchEvent("change"); await r.locator("select").nth(0).selectOption(String(hh)); await r.locator("select").nth(1).selectOption(String(mm)); await r.locator("select").nth(2).selectOption(ap); }

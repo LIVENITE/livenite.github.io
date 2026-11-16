@@ -153,6 +153,13 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Admins only.
 - Activities are chosen by clicking or tapping, not dragged, because dragging is error-prone on phones.
 
+**Apply, then Save all on every screen** (Nov 17, 2026)
+- Admin and the game screens now work like the run sheet: each box has Apply and Undo, and a save bar at the bottom has Save all and Cancel.
+- On Admin, Save all saves the title section, navigation bar, venues and all applied activity changes (including new and deleted activities) in one step. Deleting an activity takes two taps, then waits for Save all.
+- On game screens, Save all saves each applied box in turn (time, winners, 50/50 pot, winning tickets).
+- Claimed ticks still save instantly. Load sample night and Clear all still act straight away, but only once applied changes are saved or cancelled.
+- Why: one consistent way of saving across the site (DATA-RULES.md rule 4).
+
 **Event times use Apply, then Save all at the bottom** (Nov 16, 2026)
 - The Event times box has Apply instead of Save and Cancel. Applying shows the new times on the run sheet straight away; Save all at the bottom saves them together with any activity changes, and Cancel there drops everything.
 - Special case: Apply itself refuses times that can never work (more than 12 hours, or an end before the start), with a clear message, until they're fixed.

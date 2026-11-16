@@ -183,7 +183,7 @@ See Known limit L1.
 *Code:* `saveClaim()`. *Check:* `preview-save-rules`, `emu-two-phones-offline`.
 
 **DRAW-5. Saving the ticket list.**
-- "Save ticket list" saves the draft's labels, tickets, names, added and removed rows, and the `resultsFinal` setting, in one transaction.
+- Apply, then Save all (SAVE-1), saves the draft's labels, tickets, names, added and removed rows, and the `resultsFinal` setting, in one transaction.
 - Each row's `claimed` is taken from the latest saved list, never from the draft.
 
 *Code:* `slotsArea.save`.
@@ -267,7 +267,7 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 
 *Code:* `moveEnd()`, `setTimes()`, `gm-set-form`.
 
-**GAME-4. Save times.**
+**GAME-4. Saving times** (Apply, then Save all; SAVE-1).
 - Saves only what changed (`start` and/or `length`), plus the original slot the first time (TIME-4).
 - Refused if the result breaks EVT-3.
 
@@ -275,7 +275,7 @@ It shows the 50/50's name, the pot, and "m:ss" / "Hh MM" until the start, then "
 
 **GAME-5. Winners.**
 - "Add to list" and × change the draft.
-- "Save winners" runs a transaction on the latest list: removes the first occurrence of each removed name, then appends the added names.
+- Saving (Apply, then Save all; SAVE-1) runs a transaction on the latest list: removes the first occurrence of each removed name, then appends the added names.
 - Maximum 50 winners.
 
 *Code:* `winArea`. *Check:* `emu-two-phones-offline` (two phones).
@@ -406,6 +406,34 @@ The database checks EVT-3 against the event times after the save.
 
 ---
 
+## SAVE: Apply, then Save all (every screen)
+
+**SAVE-1. Boxes apply; the save bar saves.** (`DATA-RULES.md` rule 4, "Screens with one shared Save".)
+- Every edit box has **Apply** and **Undo**: Admin's title section, navigation bar and venues; the game screens' time, winners, 50/50 pot and winning tickets. (The run sheet's are in EVT-2a and RS.)
+- Apply checks the box (its own rules, such as a blank venue name or more than 50 winners) and refuses with "Can't apply: …" and nothing staged; otherwise it stages the box. A change after Apply needs Apply again.
+- Messages: "Press Apply to use these changes." before Apply; "Applied. Press Save all at the bottom to save." after.
+- Each screen has a save bar at the bottom (`#admin-savebar`, `#gm-savebar`): "N unsaved changes", **Save all**, **Cancel**. Save all is refused with "Apply or undo the changes in … first." while any box has changes not applied, and with "Can't save: …" when a check across boxes fails. Cancel drops every box's changes.
+- The bar's parts are made once and only updated, so a press is never lost to a redraw.
+- "Task done" ticks (Claimed) still save instantly, outside this.
+
+*Code:* `editArea()`, `applyArea()`, `undoArea()`, `markArea()`, `markPageBars()`, `runPageSave()`, `PAGES`. *Check:* `preview-save-rules`.
+
+**SAVE-2. Admin saves in one step.** Save all on Admin writes the title section, navigation bar, venues and every applied activity change (new, edited, deleted) in one batch, so related changes (say, a new venue and an activity moved into it) can't land without each other.
+- The activity editor's **Apply** stages the activity (closing the editor). Its row then shows "Unsaved change", "New, unsaved" or "Will be deleted when you press Save all", with **Undo**. Reopening it shows the applied values. **Cancel** in the editor closes it without applying.
+- Delete takes two taps, then waits for Save all (DATA-RULES rule 6). Deleting an activity that was never saved just removes it.
+- Checks across boxes at Save all: only one 50/50 among the activities as they'll be, and no removed venue still used by an activity as it'll be.
+- Load sample night and Clear all write straight away, so they're refused until applied changes are saved or cancelled.
+
+*Code:* `actStage`, `effActs()`, `PAGES[0]`, `m-form` (Apply) and `m-delete` handlers, `renderActList()`. *Check:* `preview-save-rules`, `emu-two-phones-offline`.
+
+**SAVE-3. Game screens save box by box.** Save all on a game screen saves each applied box in turn (they're separate records with nothing checked between them). If one fails, the boxes before it stay saved and the failed one keeps its changes and shows why.
+
+*Code:* `PAGES[1]`, `saveAreaNow()`. *Check:* `preview-save-rules`, `preview-startnow`, `preview-wname`.
+
+**SAVE-4. The save bar is never covered.** The Admin and game screens sit above the footer, the footer gets room underneath, and the unsaved-changes bar sits above the save bar.
+
+*Code:* `cards.css` (`main.admin`, `.leave-bar`). *Check:* `preview-pinned`.
+
 ## ACC: access
 
 **ACC-1. Guests** can read activities, site settings and the 50/50 pot, without logging in.
@@ -510,3 +538,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-16:** EVT-2, new EVT-2a, EVT-3, EVT-5, EVT-6: event times use Apply (refusing impossible times on the spot), then Save all with the run sheet's changes; moves and outside-hours flags follow the applied times; stranding is refused at Save all instead of when setting the times. The generic Apply / Save all rule is in DATA-RULES.md rule 4.
 - **2026-11-16:** MOT-4: run sheet slides now move the real items instead of using View Transitions, which ignored taps for ¼ second (a Save all pressed straight after Apply was lost).
 - **2026-11-16:** Fixed: after Apply on an outside-hours activity, the footer covered Save all and every block slid. RS-4 (the section stays open), MOT-4 (positions measured inside each list; the save bar above the footer).
+- **2026-11-17:** New SAVE section (SAVE-1 to SAVE-4): Apply, then Save all on Admin and the game screens, matching the run sheet. GAME-4, GAME-5 and DRAW-5 now save through it.

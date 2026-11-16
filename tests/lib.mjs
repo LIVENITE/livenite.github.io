@@ -27,3 +27,9 @@ export async function launch(extraArgs = [], { motion = false } = {}) {
   }
   return browser;
 }
+
+// Presses Save all in the save bar of the screen being shown (DATA-RULES rule 4: Apply, then Save all).
+export async function saveAll(p) {
+  await p.locator(".page-bar:visible button, #rs-savebar:visible button", { hasText: /^Save all$/ }).first().click();
+  await p.waitForTimeout(300);
+}

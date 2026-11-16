@@ -2,7 +2,7 @@
 import http from "node:http";
 import { readFileSync, existsSync, statSync, mkdirSync } from "node:fs";
 import { join, extname } from "node:path";
-import { REPO, OUT, launch } from "./lib.mjs";
+import { REPO, OUT, launch, saveAll } from "./lib.mjs";
 
 const SITE = REPO;
 const HERE = new URL(".", import.meta.url).pathname;
@@ -82,17 +82,18 @@ await A.locator(".act-row", { hasText: "Neon Bingo" }).getByRole("button", { nam
 await A.fill("#m-tag", "Edited on phone A");
 const bingo = await hrefOf(B, "Neon Bingo");
 await B.goto(BASE + "/" + bingo); await B.locator("#gm-win-panel").waitFor();
-await B.fill("#gm-win-name", "Added on phone B"); await B.click("#gm-win-form button[type=submit]"); await B.click("#gm-win-save");
+await B.fill("#gm-win-name", "Added on phone B"); await B.click("#gm-win-form button[type=submit]"); await B.click("#gm-win-save"); await saveAll(B);
 check(await waitFor(B, () => document.getElementById("gm-win-status").textContent.startsWith("Saved")), "phone B saves a winner");
-await A.click("#m-form button[type=submit]");
-check(await waitFor(A, () => document.getElementById("m-done").textContent.startsWith("Saved")), "phone A saves the editor");
+await A.click("#m-apply"); await saveAll(A);
+check(await waitFor(A, () => document.getElementById("admin-savebar").textContent.startsWith("Saved")), "phone A saves the editor");
 const G = await open("/" + bingo.replace("gm-", "a-"), DESK);
 check(await waitFor(G, () => [...document.querySelectorAll("#d-winners li")].some((l) => l.textContent === "Added on phone B") && document.querySelector("#d-card .c-tag")?.textContent === "Edited on phone A"), "both changes kept: B's winner and A's tagline");
 
 // 4b. Two admins save different settings panels at once.
 await A.goto(BASE + "/#admin"); await B.goto(BASE + "/#admin"); await A.waitForTimeout(500);
 await A.fill("#a-brand", "From A"); await B.locator("#a-venues li input").nth(0).fill("From B");
-await Promise.all([A.click("#t-save"), B.click("#v-save")]);
+await A.click("#t-save"); await B.click("#v-save");
+await Promise.all([saveAll(A), saveAll(B)]);
 check(await waitFor(A, () => document.querySelector("#a-venues li input")?.value === "From B") && await waitFor(B, () => document.getElementById("a-brand").value === "From A"), "title from A and venue from B both kept");
 
 // 4c. Draws: A drafts ticket numbers while B ticks Claimed; A's Save keeps B's claim.
@@ -102,7 +103,7 @@ await A.locator("#gm-slots li").nth(4).locator("input.tno").fill("555555");
 await B.locator("#gm-slots li").nth(6).locator("input[type=checkbox]").check();
 check(await waitFor(B, () => document.querySelectorAll("#gm-slots li")[6].querySelector(".tick-saved").textContent === "Saved"), "phone B's Claimed saves instantly");
 check(await waitFor(A, () => document.querySelectorAll("#gm-slots li")[6].querySelector("input[type=checkbox]").checked) && (await A.inputValue("#gm-slots li:nth-child(5) input.tno")) === "555555", "phone A sees B's claim and keeps its own typing");
-await A.click("#gm-draws-save");
+await A.click("#gm-draws-save"); await saveAll(A);
 check(await waitFor(G, () => true) && await waitFor(A, () => document.getElementById("gm-draws-status").textContent.startsWith("Saved")), "phone A saves its ticket list");
 await G.goto(BASE + "/" + early.replace("gm-", "a-"));
 check(await waitFor(G, () => { const l = [...document.querySelectorAll("#d-tix li")]; return l[4] && l[4].textContent.includes("555555") && l[6].classList.contains("claimed"); }), "guest sees A's ticket and B's claim");
@@ -110,12 +111,12 @@ check(await waitFor(G, () => { const l = [...document.querySelectorAll("#d-tix l
 // 5. Offline: a save shows it's waiting, never a false Saved, then saves once back online.
 await A.goto(BASE + "/#admin"); await B.goto(BASE + "/#admin"); await A.waitForTimeout(500);
 await A.context().setOffline(true);
-await A.fill("#a-eyebrow", "Saved while offline"); await A.click("#t-save");
+await A.fill("#a-eyebrow", "Saved while offline"); await A.click("#t-save"); await saveAll(A);
 await A.waitForTimeout(9000);
-const off = await A.textContent("#t-status");
+const off = await A.textContent("#admin-savebar");
 check(!off.startsWith("Saved"), "offline save never says Saved: " + off);
 await A.context().setOffline(false);
-check(await waitFor(A, () => document.getElementById("t-status").textContent.startsWith("Saved"), null, 30000), "saves once back online");
+check(await waitFor(A, () => document.getElementById("admin-savebar").textContent.startsWith("Saved"), null, 30000), "saves once back online");
 check(await waitFor(B, () => document.getElementById("a-eyebrow").value === "Saved while offline", null, 15000), "the other phone gets it");
 
 // 6. Reload mid-edit: nothing half-saved.

@@ -1,4 +1,4 @@
-import { PREVIEW, SHOTS, launch } from "./lib.mjs";
+import { PREVIEW, SHOTS, launch, saveAll } from "./lib.mjs";
 const f = PREVIEW;
 const b = await launch();
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
@@ -12,9 +12,9 @@ for (const [n, vp] of [["desk", { width: 1280, height: 900 }], ["phone", { width
   ck(await p.isVisible("#gm-guide") && (await p.locator("#gm-guide-steps li").count()) === 5, n + " Draws screen shows the 5-step guide");
   ck((await now()).startsWith("End time passed"), n + " finished, not all drawn → step 4 highlighted: " + await now());
   if (n === "phone") await p.locator("#gm-guide").screenshot({ path: SHOTS + "/guide-phone.png" });
-  await p.click("#gm-start-now"); await p.click("#gm-time-save"); await p.waitForTimeout(300);
+  await p.click("#gm-start-now"); await p.click("#gm-time-save"); await saveAll(p);
   ck((await now()).startsWith("Drawing"), n + " after Start now → Drawing step: " + await now());
-  await p.check("#gm-final"); await p.click("#gm-draws-save"); await p.waitForTimeout(300);
+  await p.check("#gm-final"); await p.click("#gm-draws-save"); await saveAll(p);
   ck((await now()) === "All tickets drawn", n + " after All drawn → step 3");
   await p.goto(f + "#gm-" + ff); await p.waitForTimeout(300);
   ck(await p.isVisible("#gm-guide") && (await p.textContent("#gm-guide-title")) === "How the 50/50 works", n + " 50/50 screen shows its own guide, now at: " + await now());
