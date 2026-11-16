@@ -193,6 +193,7 @@ Dates before November 2 are approximate: those decisions were made in conversati
 - Why: the run sheet's first animations (preview Version 17) felt disorienting. The real problem was that a tapped item gave no sign it had been tapped. The rules were settled from questions and the "Motion options" mock-up.
 - Key choices: everything tappable presses in. Main buttons and run sheet blocks get a strong hover on computers. A selected item turns white with a stripe of its own colour across about a third of it. What changed glows yellow for 1 second, only where you were working. Things that move slide for ¼ second, then glow. Buttons tapped repeatedly (like +5) change instantly instead of sliding, because a slide makes the browser ignore taps anywhere on the page. Changing screens is instant. Errors shake (a red flash with reduce motion) and vibrate on Android phones.
 - The whole design was reworked to follow them on Nov 14 (design preview Version 18), replacing the earlier run sheet animations and the preview-only speed switch. Details are in LOGIC-RULES.md, section MOT.
+- Nov 16: slides are now built by moving the real items, not with the browser's View Transitions, which ignored taps while they played (Save all pressed straight after Apply was lost). No animation may block a tap (MOTION-RULES rule 5).
 - Accepted trade-off: the wide stripe on a selected run sheet block leaves less room for its name, so short blocks show a shortened name while selected.
 
 **Nothing goes live without asking first** (ongoing)

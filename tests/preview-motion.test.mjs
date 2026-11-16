@@ -5,8 +5,13 @@ import { PREVIEW, SHOTS, launch } from "./lib.mjs";
 const b = await launch([], { motion: true });
 const errs = []; let fail = 0; const ck = (ok, n) => { console.log(ok ? "PASS" : "FAIL", n); if (!ok) fail++; };
 async function pick(p, root, date, hh, mm, ap) { const r = p.locator(root); await r.locator("input[type=date]").fill(date); await r.locator("input[type=date]").dispatchEvent("change"); await r.locator("select").nth(0).selectOption(String(hh)); await r.locator("select").nth(1).selectOption(String(mm)); await r.locator("select").nth(2).selectOption(ap); }
-// Count every slide the page starts.
-const count = () => { window.__vt = 0; const o = Document.prototype.startViewTransition; if (o) Document.prototype.startViewTransition = function (cb) { window.__vt++; return o.call(this, cb); }; };
+// Count slides on the run sheet: blocks and list items moving (their inline 250 ms transition), and panels sliding in or out.
+// (Press-in also changes transform, but through the stylesheet, so it isn't counted.)
+const count = () => {
+  window.__vt = 0;
+  document.addEventListener("transitionrun", (e) => { if (e.propertyName === "transform" && e.target.style && e.target.style.transition.includes("250ms") && e.target.closest("#view-runsheet")) window.__vt++; }, true);
+  document.addEventListener("animationstart", (e) => { if (["panel-in", "slide-up", "slide-down"].includes(e.animationName) && e.target.closest && e.target.closest("#view-runsheet")) window.__vt++; }, true);
+};
 async function open(viewport, opts = {}, hash = "#runsheet", time = "2026-10-29T21:20:00-04:00") {
   const ctx = await b.newContext({ viewport, ignoreHTTPSErrors: true, timezoneId: "America/Toronto", ...opts });
   const p = await ctx.newPage(); p.on("pageerror", (e) => errs.push(e.message));
@@ -21,7 +26,7 @@ async function setTimes(p) {
   await p.click("#ev-apply"); await p.waitForTimeout(400); await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click(); await p.waitForTimeout(400);
 }
 const vt = (p) => p.evaluate(() => window.__vt);
-const settle = (p) => p.waitForFunction(() => !document.documentElement.classList.contains("rs-moving"), null, { timeout: 3000 }).catch(() => {});
+const settle = (p) => p.waitForTimeout(350); // a slide takes 250 ms, then the glow starts
 const has = (p, sel, cls) => p.evaluate(([s, c]) => [...document.querySelectorAll(s)].some((n) => n.classList.contains(c)), [sel, cls]);
 const PLINKO = "a4GoYqZ75BN9fHN0nOx9";
 
@@ -68,7 +73,7 @@ const curV = await p.locator('#rs-side [data-row="v"] select').inputValue();
 const t0 = Date.now();
 await p.locator('#rs-side [data-row="v"] select').selectOption(venues.find((v) => v !== curV));
 await p.waitForTimeout(60);
-ck(await vt(p) === n0 + 1, "changing the venue slides");
+ck(await vt(p) > n0, "changing the venue slides");
 await settle(p);
 ck(Date.now() - t0 < 900, "the slide is quick (finished in " + (Date.now() - t0) + " ms, including test overhead)");
 ck(!(await has(p, '#rs-side [data-row="v"]', "glow")), "a venue change doesn't glow (you're already looking at the dropdown)");
@@ -78,8 +83,14 @@ ck(await has(p, bar(PLINKO), "glow"), "Cancel slides back and the reverted block
 await p.click("#rs-late-btn"); await settle(p);
 n0 = await vt(p);
 await p.locator("#rs-side button", { hasText: "Add to changes" }).click(); await settle(p); await p.waitForTimeout(50);
-ck(await vt(p) === n0 + 1 && await has(p, bar("MeBxoJbmr1iSLrR9Qeyd"), "glow"), "Running late: Add to changes slides, then the moved blocks glow");
+ck(await vt(p) > n0 && await has(p, bar("MeBxoJbmr1iSLrR9Qeyd"), "glow"), "Running late: Add to changes slides, then the moved blocks glow");
 await p.screenshot({ path: SHOTS + "/motion-laptop.png" });
+// Taps keep working while things slide: Save all pressed straight after Apply (mid-slide) saves.
+await p.locator('#rs-away .oi', { hasText: "STRONG" }).click(); await p.waitForTimeout(200);
+await p.locator("#rs-side .exact button", { hasText: "Apply" }).click({ noWaitAfter: true });
+await p.waitForTimeout(40);
+await p.locator("#rs-savebar button", { hasText: /^Save all$/ }).click({ force: true }); await p.waitForTimeout(400);
+ck((await p.textContent("#rs-savebar")).includes("No unsaved") && await p.locator('#rs-away .oi', { hasText: "STRONG" }).count() === 0, "Save all straight after Apply (while sliding) saves");
 // Rule 11: a blocked change shakes its message.
 await p.locator(bar("MeBxoJbmr1iSLrR9Qeyd")).click();
 ck(!(await p.isVisible("#rs-side .exact-grid")) && (await p.textContent("#rs-side .exact-head")).startsWith("▸"), "the exact date and time section starts folded");
@@ -87,7 +98,7 @@ await p.locator("#rs-side .exact-head").click(); await p.waitForTimeout(60);
 await pick(p, "#rs-side .exact-grid .field:nth-child(1) .dtpick", "2026-10-30", 3, 0, "AM");
 await p.locator("#rs-side .exact button", { hasText: "Apply" }).click(); await p.waitForTimeout(60);
 ck(await has(p, "#rs-toast", "shake"), "a blocked change shakes its message");
-await p.locator("#rs-savebar button", { hasText: "Cancel" }).click(); await settle(p);
+const cx = p.locator("#rs-savebar button", { hasText: "Cancel" }); if (await cx.isEnabled()) { await cx.click(); await settle(p); }
 await p.context().close();
 
 // ================= Phone run sheet =================
@@ -95,7 +106,7 @@ p = await open({ width: 390, height: 844 }, { isMobile: true, hasTouch: true });
 const item = (id) => `#rs-list .pitem[data-rs="${id}"]`;
 n0 = await vt(p);
 await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + " .phead").click(); await settle(p);
-ck(await vt(p) === n0 + 1, "opening an item's editor slides");
+ck(await vt(p) > n0, "opening an item's editor slides");
 ck(await p.evaluate((s) => getComputedStyle(document.querySelector(s + " .phead")).backgroundImage.includes("255, 255, 255"), item("MeBxoJbmr1iSLrR9Qeyd")), "the open item's header is white with its own-colour stripe");
 n0 = await vt(p);
 await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + ' [data-row="e"] button', { hasText: "+10" }).click(); await p.waitForTimeout(80);
@@ -105,13 +116,13 @@ await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + " .exact-head").click(); await p.
 await p.locator(item("MeBxoJbmr1iSLrR9Qeyd") + ' .exact button', { hasText: /^Undo$/ }).click(); await settle(p);
 n0 = await vt(p);
 await p.click("#rs-late-btn"); await p.waitForTimeout(60);
-ck(await vt(p) === n0 + 1 && await p.evaluate(() => document.querySelector("#rs-sheet .sheet")?.style.viewTransitionName === "rs-sheet"), "Running late panel slides up");
+ck(await vt(p) > n0 && await p.evaluate(() => document.querySelector("#rs-sheet .sheet")?.classList.contains("sheet-in")), "Running late panel slides up");
 await settle(p);
 n0 = await vt(p);
 await p.locator("#rs-sheet .seg span", { hasText: /^10/ }).click(); await p.waitForTimeout(80);
 ck(await vt(p) === n0, "the By choices change instantly (repeat-tap)");
 await p.locator("#rs-sheet button", { hasText: "Cancel" }).click(); await p.waitForTimeout(60);
-ck(await vt(p) === n0 + 1, "Cancel slides the panel down");
+ck(await vt(p) > n0, "Cancel slides the panel down");
 await settle(p);
 // Re-sorting keeps the edited activity in view.
 const first = p.locator("#rs-list .pitem").filter({ hasNotText: "Done" }).filter({ hasNotText: "LIVE" }).first();

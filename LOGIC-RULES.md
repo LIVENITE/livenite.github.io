@@ -444,13 +444,13 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 *Code:* `glow()`, `glowText()`, `rsGlow()`, `gmGlowNext`. *Check:* `preview-motion`.
 
 **MOT-4. Slides, and every tap counting.** [5, 6, 7]
-- On the run sheet, these slide for ¼ second (View Transitions), then glow: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
+- On the run sheet, these slide for ¼ second, then glow. The slide moves the real blocks and list items from their old place to their new one (matched by activity id), so taps keep working mid-slide: venue change, Apply, Undo, Running late Add to changes and Cancel, the save bar's Cancel, opening or closing a phone item or Earlier, and the phone Running late panel (up from the bottom, down when closed).
 - These never slide (repeat-tap buttons and selecting): −5 / +5 / +10, Start now, End now, the By choices, the "after" dropdown, Extend, and selecting a block.
 - The Admin activity editor, the Draws menu and the unsaved-changes bar slide in and out, and the draw guide's steps slide in when it's unfolded, with CSS animations (`panelIn()` / `panelOut()`), which don't block taps.
 - Notes that appear after a tap keep their space when empty (game screen "Saved: …" and "Scheduled: …"), so buttons never shift between taps.
-- No slides in browsers without View Transitions, or with reduce motion on (`canMove()`).
+- No slides with reduce motion on (`canMove()`). Nothing uses View Transitions, which block taps while they play.
 
-*Code:* `rsTap()`, `panelIn()`, `panelOut()`, `canMove()`. *Check:* `preview-motion` (quick-tap checks on the run sheet and game screen).
+*Code:* `rsTap()`, `panelIn()`, `panelOut()`, `canMove()`. *Check:* `preview-motion` (quick-tap checks on the run sheet and game screen, and Save all pressed straight after Apply).
 
 **MOT-5. Errors.** [11]
 - Every error message shakes for ¼ second and vibrates on phones that allow it (not iPhones): `bad()` / `setStatus(…, true)`, Event times errors, "Could not save" on the run sheet, the save bar when it first turns to "Can't save", and blocked-change notes.
@@ -507,3 +507,4 @@ How screens respond to taps, following MOTION-RULES.md. Rule numbers in brackets
 - **2026-11-14:** MOT-1, MOT-3, MOT-4 extended to every page: the header, footer, back links, floating 50/50 badge and draw guide press in; Admin's moved menu items and new venues glow; the draw guide's steps slide in.
 - **2026-11-14:** MOT-6: the separate 50/50 board and TV screen count the pot up and brighten it; their header links press in.
 - **2026-11-16:** EVT-2, new EVT-2a, EVT-3, EVT-5, EVT-6: event times use Apply (refusing impossible times on the spot), then Save all with the run sheet's changes; moves and outside-hours flags follow the applied times; stranding is refused at Save all instead of when setting the times. The generic Apply / Save all rule is in DATA-RULES.md rule 4.
+- **2026-11-16:** MOT-4: run sheet slides now move the real items instead of using View Transitions, which ignored taps for ¼ second (a Save all pressed straight after Apply was lost).

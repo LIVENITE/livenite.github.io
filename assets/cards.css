@@ -510,15 +510,13 @@ a.card:active { transform: scale(0.97); filter: brightness(0.9); }
 .gm-note { min-height: 1.45em; }
 .unseen { visibility: hidden; }
 
-/* Rules 6 and 7: run sheet slides use the browser's View Transitions, ¼ second. */
-:root.rs-moving::view-transition-group(*),
-:root.rs-moving::view-transition-old(*),
-:root.rs-moving::view-transition-new(*) { animation-duration: 250ms; animation-timing-function: ease-in-out; }
-/* The phone Running late panel slides up from the bottom when it opens and back down when it closes. */
-:root.rs-moving::view-transition-new(rs-sheet):only-child { animation: 250ms ease-out both slide-up; }
-:root.rs-moving::view-transition-old(rs-sheet):only-child { animation: 250ms ease-in both slide-down; }
-:root.rs-moving::view-transition-new(rs-dim):only-child { animation: 250ms ease-out both fade-in; }
-:root.rs-moving::view-transition-old(rs-dim):only-child { animation: 250ms ease-in both fade-out; }
+/* Rules 6 and 7: run sheet slides move the real blocks and list items (see rsTap in site.js), ¼ second, so taps keep
+   working while they move. The phone Running late panel slides up when it opens and back down when it closes. */
+.runsheet .sheet.sheet-in { animation: 250ms ease-out both slide-up; }
+.runsheet .dim.dim-in { animation: 250ms ease-out both fade-in; }
+.rs-sheet-out { pointer-events: none; }
+.rs-sheet-out .sheet { animation: 250ms ease-in both slide-down; }
+.rs-sheet-out .dim { animation: 250ms ease-in both fade-out; }
 @keyframes slide-up { from { transform: translateY(100%); } }
 @keyframes slide-down { to { transform: translateY(100%); } }
 @keyframes fade-in { from { opacity: 0; } }

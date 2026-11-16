@@ -12,8 +12,8 @@ var reduceMotion = window.matchMedia && matchMedia("(prefers-reduced-motion: red
 var $ = function (id) { return document.getElementById(id); };
 
 // ---------- Motion and feedback helpers (MOTION-RULES.md) ----------
-// Movement only where the browser supports slides (View Transitions) and reduce motion is off; otherwise changes are instant.
-function canMove() { return !reduceMotion && typeof document.startViewTransition === "function"; }
+// Movement only when reduce motion is off; otherwise changes are instant.
+function canMove() { return !reduceMotion; }
 function replayClass(n, cls) { if (!n) return; n.classList.remove(cls); void n.offsetWidth; n.classList.add(cls); }
 // Rule 4: what changed glows yellow for 1 second (also with reduce motion: it doesn't move anything).
 function glow(n) { replayClass(n, "glow"); }
@@ -1499,7 +1499,6 @@ function renderTimeline(list) {
       var st = rsState(a), c = rsCur(a), top = 6 + a.lane * 52 + "px";
       var b = el("div", "bar s-" + a.style + (rsOutside(c) ? " outside" : "") + (RS.selected === a.id ? " sel" : "") + (st === "done" ? " done" : ""));
       b.setAttribute("data-id", a.id);
-      b.style.viewTransitionName = "rsb-" + a.id;
       var bs = Math.max(a.s, t0), be = Math.min(a.e, t1);
       if (c.v !== a.v) { bs = Math.max(c.s, t0); be = Math.min(c.e, t1); }
       b.style.left = x(bs) + "%"; b.style.width = "calc(" + Math.max(0.4, x(be) - x(bs)) + "% - 3px)"; b.style.top = top;
@@ -1508,7 +1507,7 @@ function renderTimeline(list) {
       var label = "<b>" + esc(a.t) + (c.v !== a.v ? " ↳" : "") + "</b><span class='tag'>" + (st === "live" ? "LIVE · " : st === "done" ? "Finished · " : "") + hmShort(c.s) + "–" + hmShort(c.e) + "</span>";
       var pickA = function () { RS.selected = a.id; RS.late = null; rsTap({ instant: true }); };
       b.addEventListener("click", pickA);
-      if (be - bs < 40) { b.classList.add("narrow"); var sl = elh("div", "side-label", label); sl.style.viewTransitionName = "rsl-" + a.id; sl.style.left = "calc(" + x(Math.min(t1, Math.max(a.e, c.e))) + "% + 8px)"; sl.style.top = top; sl.addEventListener("click", pickA); box.append(b, sl); }
+      if (be - bs < 40) { b.classList.add("narrow"); var sl = elh("div", "side-label", label); sl.setAttribute("data-lid", a.id); sl.style.left = "calc(" + x(Math.min(t1, Math.max(a.e, c.e))) + "% + 8px)"; sl.style.top = top; sl.addEventListener("click", pickA); box.append(b, sl); }
       else { b.innerHTML = label; box.append(b); }
       if (rsChanged(a) && (c.s !== a.s || c.e !== a.e)) { var g = el("div", "ghost-bar"); g.style.left = x(Math.max(c.s, t0)) + "%"; g.style.width = "calc(" + (x(Math.min(c.e, t1)) - x(Math.max(c.s, t0))) + "% - 3px)"; g.style.top = top; box.append(g); }
       if (moving.indexOf(a.id) >= 0) { var mv = el("div", "moved-bar"); var ms = c.s + RS.late.by, me = Math.min(c.e + RS.late.by, t1); mv.style.left = x(ms) + "%"; mv.style.width = "calc(" + (x(me) - x(ms)) + "% - 3px)"; mv.style.top = top; box.append(mv); }
@@ -1532,7 +1531,6 @@ function renderTimeline(list) {
     ol.append(el("span", "out-flag", "⚠ OUTSIDE EVENT HOURS (" + away.length + "): guests still see these. Move them into the event or delete them."));
     away.forEach(function (a) {
       var c = rsCur(a), it = elh("div", "oi" + (RS.selected === a.id ? " sel" : ""), "<span><b>" + esc(a.t) + "</b> · " + esc(rsVName(c.v)) + "</span><span class='meta'>" + rsDayName(c.s) + " " + hmShort(c.s) + "–" + hmShort(c.e) + "</span>");
-      it.style.viewTransitionName = "rso-" + a.id;
       it.setAttribute("data-id", a.id);
       it.addEventListener("click", function () { RS.selected = a.id; RS.late = null; rsTap({ instant: true }); });
       ol.append(it);
@@ -1560,7 +1558,7 @@ function renderRsPhone(list) {
   function item(a) {
     var st = rsState(a), c = rsCur(a), open = RS.open === a.id;
     var it = el("div", "pitem s-" + a.style + (open ? " open" : "") + (rsChanged(a) ? " moved" : ""));
-    it.style.viewTransitionName = "rsp-" + a.id; it.setAttribute("data-rs", a.id);
+    it.setAttribute("data-rs", a.id);
     var head = elh("div", null, "<b>" + esc(a.t) + "</b><br><span class='t'>" + hmShort(c.s) + " – " + hmShort(c.e) + "</span> <span class='v'>· " + esc(rsVName(c.v)) + "</span>");
     var toggle = function () { RS.open = open ? null : a.id; rsTap(); };
     var sw = el("span", "sw s-" + a.style), tag = el("span", "st " + (st === "live" ? "live" : ""), st === "live" ? "LIVE" : st === "done" ? "✓ Done" : a.type);
@@ -1591,8 +1589,8 @@ function renderRsSheet(list) {
   if (!RS.late || innerWidth > 760) return;
   var dim = el("div", "dim"); dim.addEventListener("click", function () { RS.late = null; rsTap(); });
   var sheet = el("div", "sheet"); renderLate(sheet, list);
-  // Named so the slide can bring it up from the bottom when it opens and take it down when it closes.
-  dim.style.viewTransitionName = "rs-dim"; sheet.style.viewTransitionName = "rs-sheet";
+  // It slides up from the bottom when it opens (not on every redraw while it's open).
+  if (RS.sheetOpening && canMove()) { sheet.classList.add("sheet-in"); dim.classList.add("dim-in"); }
   h.append(dim, sheet);
 }
 
@@ -1696,21 +1694,55 @@ function renderRunSheet(forceEvent) {
 }
 
 // ---- Motion on taps (MOTION-RULES.md) ----
-// Taps that move things slide to the new layout (the browser's View Transitions feature), then what changed glows.
-// Each activity is tagged with its id so the browser can follow it. Repeat-tap buttons and selecting change instantly.
-// Database updates, Save and window resizes redraw instantly. Browsers without the feature change instantly.
+// Taps that move things slide to the new layout, then what changed glows. The slide moves the real blocks and list items
+// from where they were to where they are now (each is matched by its activity id), so taps keep working while they move.
+// Repeat-tap buttons and selecting change instantly. Database updates, Save and window resizes redraw instantly.
 // o: { instant, force, flash: [activity ids whose block or list item glows], ctl: { id, prev } (the editing controls glow) }
+var RS_SLIDE_MS = 250;
+function rsKeyed() {
+  var out = {};
+  document.querySelectorAll("#rs-tl .bar[data-id], #rs-tl .side-label[data-lid], #rs-away .oi[data-id], #rs-list .pitem[data-rs]").forEach(function (n) {
+    var k = n.getAttribute("data-id") ? (n.closest("#rs-away") ? "o" : "b") + n.getAttribute("data-id") : n.getAttribute("data-lid") ? "l" + n.getAttribute("data-lid") : "p" + n.getAttribute("data-rs");
+    if (n.getClientRects().length) out[k] = n;
+  });
+  return out;
+}
 function rsTap(o) {
   o = o || {};
-  var follow = o.ctl ? o.ctl.id : o.flash && o.flash.length ? o.flash[0] : null, root = document.documentElement;
+  var follow = o.ctl ? o.ctl.id : o.flash && o.flash.length ? o.flash[0] : null;
   var draw = function () { renderRunSheet(o.force); if (!follow) follow = RS.open; };
   if (o.instant || !canMove()) { draw(); rsGlow(o); rsFollow(follow); return; }
-  root.classList.add("rs-moving");
-  var vt = document.startViewTransition(draw);
-  // A quick second tap cancels the first slide (the change itself still happens); that isn't an error.
-  vt.ready.catch(function () {});
+  // First: where everything is now, and whether the Running late panel and phone editors are open.
+  var before = {}, was = rsKeyed();
+  Object.keys(was).forEach(function (k) { before[k] = was[k].getBoundingClientRect(); });
+  var oldSheet = $("rs-sheet").querySelector(".sheet"), openBefore = document.querySelector("#rs-list .pitem.open");
+  RS.sheetOpening = !oldSheet;
+  var sheetGhost = oldSheet ? $("rs-sheet").cloneNode(true) : null;
+  draw();
+  RS.sheetOpening = false;
+  // Last, invert, play: each item starts where it was and slides to where it is now.
+  var now = rsKeyed();
+  Object.keys(now).forEach(function (k) {
+    var n = now[k], r = n.getBoundingClientRect(), b = before[k];
+    if (!b) { if (Object.keys(before).length) replayClass(n, "panel-in"); return; }
+    var dx = b.left - r.left, dy = b.top - r.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    n.style.transition = "none"; n.style.transform = "translate(" + dx + "px, " + dy + "px)";
+    void n.offsetWidth;
+    n.style.transition = "transform " + RS_SLIDE_MS + "ms ease-in-out"; n.style.transform = "";
+    setTimeout(function () { n.style.transition = ""; }, RS_SLIDE_MS + 20);
+  });
+  // A phone editor that just opened slides in.
+  var openNow = document.querySelector("#rs-list .pitem.open .edit");
+  if (openNow && (!openBefore || openBefore.getAttribute("data-rs") !== openNow.parentNode.getAttribute("data-rs"))) replayClass(openNow, "panel-in");
+  // The Running late panel slides back down when it closes: a copy of it plays the slide, then goes.
+  if (sheetGhost && !$("rs-sheet").querySelector(".sheet")) {
+    sheetGhost.removeAttribute("id"); sheetGhost.className = "rs-sheet-out";
+    document.querySelector("#view-runsheet").append(sheetGhost);
+    setTimeout(function () { sheetGhost.remove(); }, RS_SLIDE_MS);
+  }
   // Slide first, then glow (rule 6).
-  vt.finished.then(function () {}, function () {}).then(function () { root.classList.remove("rs-moving"); rsGlow(o); rsFollow(follow); });
+  setTimeout(function () { rsGlow(o); rsFollow(follow); }, RS_SLIDE_MS);
 }
 // The glow appears where you were working (rule 4): the editing controls' changed rows, or the moved blocks and list items.
 function rsGlow(o) {

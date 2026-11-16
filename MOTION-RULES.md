@@ -67,11 +67,10 @@ Whenever a tap changes something on screen (a time, a position, a value, a list)
 
 ## 5. Every tap counts
 
-While something is sliding, the browser ignores taps **anywhere on the page**, not just on the thing that's moving. So:
-
-- **Buttons people tap several times in a row never slide.** Examples: +/− buttons, nudge buttons, steppers, counters. They change instantly and use the highlight (rule 4). This way, tapping +5 three times quickly always adds 15.
-- **Other actions may slide** (rules 6 and 7), as long as the screen passes the quick-tap check in rule 14, item 4.
-- No animation may make a tap wait before its change happens.
+- **No animation may block or delay a tap.** Taps keep working while things slide, anywhere on the page, including the thing that's moving.
+- **Build slides by moving the real items** from where they were to where they are now. Don't use effects that swap the page for a moving picture of it (such as the browser's View Transitions): while that picture plays, taps anywhere on the page are ignored.
+- **Buttons people tap several times in a row never slide.** Examples: +/− buttons, nudge buttons, steppers, counters. They change instantly and use the highlight (rule 4), so each change is easy to see and tapping +5 three times quickly always adds 15.
+- Every screen passes the quick-tap check in rule 14, item 4.
 
 ## 6. Things that move slide, then highlight
 
@@ -135,7 +134,7 @@ Every screen people tap or click must pass all of these:
 1. Tap every kind of tappable thing on the screen. Each one visibly presses in as soon as it's pressed.
 2. On a computer, move the mouse over tappable things. They react, and the main button and large tiles react clearly. On a phone, nothing stays highlighted after a tap.
 3. Select an item. It's clearly marked in the selection colour with its own-colour stripe, its text is readable, and it stays marked until something else is selected.
-4. **Quick-tap check:** tap each repeat-tap button 5 times quickly. All 5 count. Then tap something that slides and immediately tap something else. The second tap counts, or the slide is changed so it does.
+4. **Quick-tap check:** tap each repeat-tap button 5 times quickly. All 5 count. Then tap something that slides and immediately tap something else, such as Save. The second tap counts.
 5. Make a change. Only what changed is highlighted, for about 1 second.
 6. Move something. It slides to its new place, then highlights. If it would end up off screen, the page follows it.
 7. Make a change, and watch the rest of the screen. Nothing outside the changed area moves, flickers or changes size.
@@ -166,13 +165,14 @@ Fill this in for each project. AI assistants: ask about anything left blank befo
 | Strong hover (rule 2) | Main yellow buttons (Save, Save all) and run sheet blocks: lift 3 pixels, light ring, deeper shadow |
 | Error vibration (rule 11) | About 0.06 seconds, Android only |
 | Gentle cues from elsewhere (rule 12) | 50/50 pot amount counts up; a card glows briefly when it goes LIVE. Run sheet: changes from others appear without a cue |
-| How motion is built | Slides use the browser's View Transitions feature where available. Browsers without it change instantly, which is allowed. |
+| How motion is built | Run sheet slides move the real blocks and list items (`rsTap()` in `site.js`); panels use CSS animations. No View Transitions (they block taps). |
 | How to run the tests | `bash tests/run.sh` |
 | Behaviour reference document | `LOGIC-RULES.md` |
 | Data rules | `DATA-RULES.md` |
-| Known limits | iPhones can't vibrate from websites (rule 11). Slides block taps across the whole page while they play (rule 5). |
+| Known limits | iPhones can't vibrate from websites (rule 11). |
 
 ## Change history
 
 - *Nov 13, 2026:* first version, from questions answered and the "Motion options" mock-up.
 - *Nov 14, 2026:* rule 4: a changed value glows on its text, not its whole row; a dropdown you just changed doesn't glow.
+- *Nov 16, 2026:* rule 5: no animation may block a tap; slides move the real items instead of using page-picture effects (which ignored taps, so Save all straight after Apply was lost).
